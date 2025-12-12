@@ -14,7 +14,7 @@ root.render(
     <LanguageProvider>
       <ThemeProvider>
         <HelmetProvider>
-          <BrowserRouter>
+          <BrowserRouter basename="/ChabakaPro">
             <App />
           </BrowserRouter>
         </HelmetProvider>
