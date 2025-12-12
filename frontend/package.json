@@ -23,6 +23,8 @@
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
+    "predeploy": "npm run build",
+    "deploy": "gh-pages -d build",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
   },
@@ -46,10 +48,7 @@
   },
   "devDependencies": {
     "autoprefixer": "^10.4.16",
-<<<<<<< HEAD
     "gh-pages": "^6.3.0",
-=======
->>>>>>> 1d50e8736b54cbd739db0d0ec84b762dbcfd84d8
     "postcss": "^8.4.32",
     "react-scripts": "5.0.1",
     "tailwindcss": "^3.4.0"
