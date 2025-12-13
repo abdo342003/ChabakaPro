@@ -50,14 +50,13 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        REACT_APP_API_URL: http://localhost:5001/api
+        REACT_APP_WHATSAPP_NUMBER: 212600000000
+        REACT_APP_PHONE_NUMBER: +212600000000
+        REACT_APP_EMAIL: contact@techsolutions-casa.ma
     container_name: chabakapro_frontend
     restart: unless-stopped
-    environment:
-      REACT_APP_API_URL: http://localhost:5001/api
-      REACT_APP_WHATSAPP_NUMBER: 212600000000
-      REACT_APP_PHONE_NUMBER: +212600000000
-      REACT_APP_EMAIL: contact@techsolutions-casa.ma
-      REACT_APP_GOOGLE_ANALYTICS_ID: G-XXXXXXXXXX
     ports:
       - "4000:80"
     depends_on:
