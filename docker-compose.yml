@@ -26,7 +26,7 @@ services:
     container_name: chabakapro_backend
     restart: unless-stopped
     environment:
-      NODE_ENV: production
+      NODE_ENV: development
       PORT: 5000
       MONGODB_URI: mongodb://admin:chabakapro2025@mongodb:27017/chabakapro?authSource=admin
       JWT_SECRET: chabakapro_jwt_secret_key_2025
@@ -34,13 +34,13 @@ services:
       EMAIL_PORT: 587
       EMAIL_USER: contact@techsolutions-casa.ma
       EMAIL_PASS: your_email_password
-      FRONTEND_URL: http://localhost:4000
+      FRONTEND_URL: https://www.chabakapro.com
     ports:
       - "5001:5000"
     depends_on:
       - mongodb
     volumes:
-      - ./backend:/usr/src/app
+      - ./backend:/usr/src/app:cached
       - /usr/src/app/node_modules
     networks:
       - chabakapro_network

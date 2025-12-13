@@ -5,8 +5,8 @@ WORKDIR /usr/src/app
 # Copier package.json et package-lock.json
 COPY package*.json ./
 
-# Installer les dépendances
-RUN npm install
+# Installer les dépendances (incluant nodemon)
+RUN npm install && npm install -g nodemon
 
 # Copier le code source
 COPY . .
@@ -14,5 +14,5 @@ COPY . .
 # Exposer le port
 EXPOSE 5000
 
-# Démarrer l'application
-CMD ["node", "src/server.js"]
+# Démarrer l'application avec nodemon pour auto-reload
+CMD ["nodemon", "src/server.js"]
