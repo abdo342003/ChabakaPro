@@ -1,76 +1,96 @@
-import React, { useEffect } from 'react';
-import { Routes, Route } from 'react-router-dom';
+import React, { useEffect, Suspense, lazy } from 'react';
+import { Routes, Route, useLocation } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+
+// Analytics - import before lazy components
+import { initGA, logPageView } from './utils/analytics';
 
 // Components
 import Navbar from './components/layout/Navbar';
 import Footer from './components/layout/Footer';
 import ScrollToTop from './components/common/ScrollToTop';
 import WhatsAppButton from './components/common/WhatsAppButton';
+import ErrorBoundary from './components/common/ErrorBoundary';
+import Loading from './components/common/Loading';
 
-// Pages
-import Home from './pages/Home';
-import ServicesParticuliers from './pages/ServicesParticuliers';
-import ServicesEntreprises from './pages/ServicesEntreprises';
-import Portfolio from './pages/Portfolio';
-import PortfolioDetail from './pages/PortfolioDetail';
-import About from './pages/About';
-import Blog from './pages/Blog';
-import BlogPost from './pages/BlogPost';
-import Contact from './pages/Contact';
-import NotFound from './pages/NotFound';
-import Admin from './pages/Admin';
+// Lazy load pages for better performance
+const Home = lazy(() => import('./pages/Home'));
+const ServicesParticuliers = lazy(() => import('./pages/ServicesParticuliers'));
+const ServicesEntreprises = lazy(() => import('./pages/ServicesEntreprises'));
+const Portfolio = lazy(() => import('./pages/Portfolio'));
+const PortfolioDetail = lazy(() => import('./pages/PortfolioDetail'));
+const About = lazy(() => import('./pages/About'));
+const Blog = lazy(() => import('./pages/Blog'));
+const BlogPost = lazy(() => import('./pages/BlogPost'));
+const Contact = lazy(() => import('./pages/Contact'));
+const NotFound = lazy(() => import('./pages/NotFound'));
+const Admin = lazy(() => import('./pages/Admin'));
 
-// Analytics
-import { initGA, logPageView } from './utils/analytics';
+// Page loading component
+const PageLoader = () => (
+  <div className="min-h-screen flex items-center justify-center">
+    <Loading />
+  </div>
+);
 
 function App() {
+  const location = useLocation();
+
   useEffect(() => {
-    // Initialiser Google Analytics
+    // Initialize Google Analytics
     if (process.env.REACT_APP_GOOGLE_ANALYTICS_ID) {
       initGA();
-      logPageView();
     }
   }, []);
 
+  // Log page views on route change
+  useEffect(() => {
+    logPageView(location.pathname + location.search);
+  }, [location]);
+
   return (
-    <div className="App bg-white dark:bg-gray-900 transition-colors duration-300">
-      <ScrollToTop />
-      <Navbar />
-      
-      <main className="min-h-screen dark:bg-gray-900 dark:text-white">
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/services/particuliers" element={<ServicesParticuliers />} />
-          <Route path="/services/entreprises" element={<ServicesEntreprises />} />
-          <Route path="/portfolio" element={<Portfolio />} />
-          <Route path="/portfolio/:id" element={<PortfolioDetail />} />
-          <Route path="/a-propos" element={<About />} />
-          <Route path="/blog" element={<Blog />} />
-          <Route path="/blog/:slug" element={<BlogPost />} />
-          <Route path="/contact" element={<Contact />} />
-          <Route path="/admin-dashboard-chabakapro" element={<Admin />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </main>
-      
-      <Footer />
-      <WhatsAppButton />
-      
-      <ToastContainer
-        position="bottom-right"
-        autoClose={5000}
-        hideProgressBar={false}
-        newestOnTop
-        closeOnClick
-        rtl={false}
-        pauseOnFocusLoss
-        draggable
-        pauseOnHover
-        theme="light"
-      />
-    </div>
+    <ErrorBoundary>
+      <div className="App bg-white dark:bg-gray-900 transition-colors duration-300">
+        <ScrollToTop />
+        <Navbar />
+        
+        <main className="min-h-screen dark:bg-gray-900 dark:text-white">
+          <Suspense fallback={<PageLoader />}>
+            <Routes>
+              <Route path="/" element={<Home />} />
+              <Route path="/services/particuliers" element={<ServicesParticuliers />} />
+              <Route path="/services/entreprises" element={<ServicesEntreprises />} />
+              <Route path="/portfolio" element={<Portfolio />} />
+              <Route path="/portfolio/:id" element={<PortfolioDetail />} />
+              <Route path="/a-propos" element={<About />} />
+              <Route path="/blog" element={<Blog />} />
+              <Route path="/blog/:slug" element={<BlogPost />} />
+              <Route path="/contact" element={<Contact />} />
+              <Route path="/admin-dashboard-chabakapro" element={<Admin />} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </Suspense>
+        </main>
+        
+        <Footer />
+        <WhatsAppButton />
+        
+        <ToastContainer
+          position="bottom-right"
+          autoClose={5000}
+          hideProgressBar={false}
+          newestOnTop
+          closeOnClick
+          rtl={false}
+          pauseOnFocusLoss
+          draggable
+          pauseOnHover
+          theme="light"
+          toastClassName="dark:bg-gray-800 dark:text-white"
+        />
+      </div>
+    </ErrorBoundary>
   );
 }
 
