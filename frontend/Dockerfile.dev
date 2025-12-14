@@ -1,0 +1,26 @@
+# Development Dockerfile with hot reload
+FROM node:18-alpine
+
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+
+# Install dependencies
+RUN npm install
+
+# Copy source files (will be overridden by volume mount)
+COPY . .
+
+# Expose port 6000 for React dev server
+EXPOSE 6000
+
+# Set environment to avoid interactive prompts
+ENV BROWSER=none
+ENV CI=false
+ENV FAST_REFRESH=true
+ENV PORT=6000
+
+# Use exec form to keep process running properly
+ENTRYPOINT ["npm"]
+CMD ["start"]

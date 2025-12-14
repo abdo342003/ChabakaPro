@@ -1,0 +1,28 @@
+# https://www.robotstxt.org/robotstxt.html
+# ChabakaPro - Services IT Casablanca
+
+User-agent: *
+Allow: /
+Disallow: /admin-dashboard-chabakapro
+Disallow: /api/
+
+# Allow important pages
+Allow: /services/
+Allow: /portfolio/
+Allow: /blog/
+Allow: /contact
+Allow: /a-propos
+
+# Crawl-delay for polite crawling
+Crawl-delay: 1
+
+# Sitemap location
+Sitemap: https://www.chabakapro.com/sitemap.xml
+
+# Google specific
+User-agent: Googlebot
+Allow: /
+
+# Bing specific
+User-agent: Bingbot
+Allow: /

@@ -13,6 +13,7 @@ const devisRoutes = require('./routes/devis');
 const blogRoutes = require('./routes/blog');
 const portfolioRoutes = require('./routes/portfolio');
 const testimonialsRoutes = require('./routes/testimonials');
+const visitorsRoutes = require('./routes/visitors');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -27,8 +28,8 @@ app.use(cors({
   origin: [
     'https://www.chabakapro.com',
     'https://chabakapro.com',
-    'http://localhost:3000',
-    'http://localhost:4000'
+    'http://localhost:4000',
+    'http://localhost:6000'
   ],
   credentials: true
 }));
@@ -58,6 +59,7 @@ app.use('/api/devis', formLimiter, devisRoutes);
 app.use('/api/blog', blogRoutes);
 app.use('/api/portfolio', portfolioRoutes);
 app.use('/api/testimonials', testimonialsRoutes);
+app.use('/api/visitors', visitorsRoutes);
 
 // Root route - API info
 app.get('/', (req, res) => {

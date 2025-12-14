@@ -139,11 +139,11 @@ test_feature "deploy-dark-mode.sh is executable" \
 echo -e "${BLUE}═══ HTTP Endpoints ═══${NC}"
 echo ""
 
-test_feature "Frontend accessible (port 3000)" \
-    "curl -s -o /dev/null -w '%{http_code}' http://localhost:3000 | grep -q 200"
+test_feature "Frontend accessible (port 4000)" \
+    "curl -s -o /dev/null -w '%{http_code}' http://localhost:4000 | grep -q 200"
 
-test_feature "Backend accessible (port 5000)" \
-    "curl -s -o /dev/null -w '%{http_code}' http://localhost:5000/api/health | grep -q -E '200|404'"
+test_feature "Backend accessible (port 5001)" \
+    "curl -s -o /dev/null -w '%{http_code}' http://localhost:5001/api/health | grep -q -E '200|404'"
 
 # Résultats
 echo ""
@@ -162,7 +162,7 @@ if [ $FAILED -eq 0 ]; then
     echo -e "${GREEN}✅ All documentation is in place!${NC}"
     echo ""
     echo "🌐 Access the website:"
-    echo "   http://localhost:3000"
+    echo "   http://localhost:4000"
     echo ""
     echo "🌓 Test dark mode:"
     echo "   Click the ☀️/🌙 toggle in the navbar"

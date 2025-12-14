@@ -1,47 +1,53 @@
 #!/bin/bash
 
-# ChabakaPro - Quick Start Script
-# This script starts all services for local development
+# ============================================
+# ChabakaPro - Démarrage avec Volumes
+# ============================================
 
-echo "🚀 Starting ChabakaPro services..."
-
-# Start backend and database
-echo "📦 Starting backend and MongoDB..."
-docker-compose up -d mongodb backend
-
-sleep 3
-
-# Check if services are running
-if docker-compose ps | grep -q "chabakapro_backend.*Up"; then
-    echo "✅ Backend is running on http://localhost:5001/api"
-else
-    echo "❌ Backend failed to start. Check logs: docker-compose logs backend"
-    exit 1
-fi
-
-# Start or rebuild frontend
-echo "🎨 Starting frontend..."
-docker-compose up --build -d frontend
-
-# Wait for frontend to be ready
-echo "⏳ Waiting for frontend to start..."
-sleep 10
-
-# Check frontend
-if docker-compose ps | grep -q "chabakapro_frontend.*Up"; then
-    echo "✅ Frontend is running on http://localhost:4000"
-else
-    echo "⚠️  Frontend may still be building. Check: docker-compose logs frontend"
-fi
-
+echo "🚀 Démarrage de ChabakaPro..."
 echo ""
-echo "📊 Service Status:"
+
+# Vérifier si nvm est disponible
+export NVM_DIR="$HOME/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+nvm use 18 2>/dev/null
+
+# Aller au dossier du projet
+cd "$(dirname "$0")" || exit 1
+
+# Arrêter les conteneurs existants
+echo "🛑 Arrêt des conteneurs existants..."
+docker-compose -f docker-compose.dev.yml down 2>/dev/null
+docker-compose down 2>/dev/null
+
+# Build le frontend d'abord
+echo ""
+echo "📦 Compilation du frontend..."
+cd frontend && npm run build && cd ..
+
+# Démarrer avec le docker-compose principal (avec volumes)
+echo ""
+echo "🐳 Démarrage des conteneurs Docker..."
+docker-compose up -d
+
+# Attendre que tout soit prêt
+sleep 5
+
+# Vérifier le statut
+echo ""
+echo "📊 Statut des conteneurs:"
 docker-compose ps
 
 echo ""
-echo "🌐 Access your application:"
-echo "   Frontend: http://localhost:4000"
-echo "   Backend:  http://localhost:5001/api"
+echo "============================================"
+echo "✅ ChabakaPro est prêt!"
 echo ""
-echo "📝 View logs: docker-compose logs -f"
-echo "🛑 Stop all:  docker-compose down"
+echo "🌐 Site web:     http://localhost:4000"
+echo "🔧 Backend API:  http://localhost:5001"
+echo "📊 MongoDB:      localhost:27017"
+echo ""
+echo "📝 Pour mettre à jour après modifications:"
+echo "   ./update.sh   (ou: cd frontend && npm run build)"
+echo ""
+echo "   Les changements sont visibles immédiatement!"
+echo "============================================"

@@ -1,1064 +1,992 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { 
-  FaEnvelope, FaFileInvoice, FaBlog, FaBriefcase, 
-  FaStar, FaEye, FaChartLine, FaSignOutAlt, FaTrash, FaCheck,
-  FaTimes, FaCalendar, FaPhone, FaUser, FaBuilding,
-  FaSync, FaCopy, FaExternalLinkAlt, FaFilter, FaSearch,
-  FaClock, FaMoneyBillWave, FaWhatsapp, FaEnvelopeOpen,
-  FaChartBar, FaHome, FaCheckCircle, FaExclamationTriangle
-} from 'react-icons/fa';
-import axios from 'axios';
-import { toast } from 'react-toastify';
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Link } from 'react-router-dom';
+import {
+  FiBookOpen,
+  FiBriefcase,
+  FiMessageSquare,
+  FiMail,
+  FiTrendingUp,
+  FiMenu,
+  FiX,
+  FiHome,
+  FiEye,
+  FiStar,
+  FiActivity,
+  FiLock,
+  FiCheckCircle,
+  FiAlertCircle,
+  FiRefreshCw,
+  FiLogOut,
+  FiUsers,
+  FiMonitor,
+  FiSmartphone,
+  FiGlobe
+} from 'react-icons/fi';
+import api from '../services/api';
+import { getVisitorStats, getVisitors } from '../services/visitorTracking';
 
-// Determine API URL based on environment
-const getApiUrl = () => {
-  if (typeof window !== 'undefined') {
-    const hostname = window.location.hostname;
-    if (hostname === 'www.chabakapro.com' || hostname === 'chabakapro.com') {
-      return 'https://church-pushed-mere-annually.trycloudflare.com/api';
-    }
-    if (hostname === 'localhost' && window.location.port === '4000') {
-      return '/api'; // Docker nginx proxy
-    }
-  }
-  return process.env.REACT_APP_API_URL || 'http://localhost:5001/api';
-};
-
-const API_URL = getApiUrl();
+// Password for admin access - Change this in production!
+const ADMIN_PASSWORD = 'ChabakaPro2025!';
 
 const Admin = () => {
-  const navigate = useNavigate();
+  // Authentication state
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [password, setPassword] = useState('');
-  const [activeTab, setActiveTab] = useState('dashboard');
-  const [loading, setLoading] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [selectedItem, setSelectedItem] = useState(null);
-  const [showModal, setShowModal] = useState(false);
+  const [passwordError, setPasswordError] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
-  // États pour les données
-  const [contacts, setContacts] = useState([]);
-  const [devis, setDevis] = useState([]);
-  const [blogs, setBlogs] = useState([]);
-  const [portfolios, setPortfolios] = useState([]);
-  const [testimonials, setTestimonials] = useState([]);
+  // Dashboard state
   const [stats, setStats] = useState({
-    totalContacts: 0,
-    totalDevis: 0,
-    totalBlogs: 0,
-    totalPortfolios: 0,
-    totalTestimonials: 0,
-    pendingContacts: 0,
-    pendingDevis: 0,
-    todayContacts: 0,
-    todayDevis: 0,
-    weekContacts: 0,
-    weekDevis: 0
+    blogs: { total: 0, published: 0, featured: 0 },
+    portfolios: { total: 0, published: 0, featured: 0, totalInvestment: 0 },
+    contacts: { total: 0, new: 0, responded: 0 },
+    devis: { total: 0, pending: 0, approved: 0 },
+    testimonials: { total: 0, verified: 0, avgRating: 0 },
+    visitors: { total: 0, today: 0, pageViews: 0 }
   });
+  const [recentContacts, setRecentContacts] = useState([]);
+  const [recentDevis, setRecentDevis] = useState([]);
+  const [recentTestimonials, setRecentTestimonials] = useState([]);
+  const [visitors, setVisitors] = useState([]);
+  const [visitorStats, setVisitorStats] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState('dashboard');
 
-  // Charger toutes les données
-  const loadAllData = useCallback(async () => {
-    setLoading(true);
-    try {
-      const [contactsRes, devisRes, blogsRes, portfoliosRes, testimonialsRes] = await Promise.all([
-        axios.get(`${API_URL}/contact`).catch(() => ({ data: { data: [] } })),
-        axios.get(`${API_URL}/devis`).catch(() => ({ data: { data: [] } })),
-        axios.get(`${API_URL}/blog`).catch(() => ({ data: { data: [] } })),
-        axios.get(`${API_URL}/portfolio`).catch(() => ({ data: { data: [] } })),
-        axios.get(`${API_URL}/testimonials`).catch(() => ({ data: { data: [] } }))
-      ]);
-
-      const contactsData = contactsRes.data?.data || [];
-      const devisData = devisRes.data?.data || [];
-      const blogsData = blogsRes.data?.data || [];
-      const portfoliosData = portfoliosRes.data?.data || [];
-      const testimonialsData = testimonialsRes.data?.data || [];
-
-      setContacts(contactsData);
-      setDevis(devisData);
-      setBlogs(blogsData);
-      setPortfolios(portfoliosData);
-      setTestimonials(testimonialsData);
-
-      // Calculer statistiques
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
-
-      setStats({
-        totalContacts: contactsData.length,
-        totalDevis: devisData.length,
-        totalBlogs: blogsData.length,
-        totalPortfolios: portfoliosData.length,
-        totalTestimonials: testimonialsData.length,
-        pendingContacts: contactsData.filter(c => c.status === 'pending').length,
-        pendingDevis: devisData.filter(d => d.status === 'pending').length,
-        todayContacts: contactsData.filter(c => new Date(c.createdAt) >= today).length,
-        todayDevis: devisData.filter(d => new Date(d.createdAt) >= today).length,
-        weekContacts: contactsData.filter(c => new Date(c.createdAt) >= weekAgo).length,
-        weekDevis: devisData.filter(d => new Date(d.createdAt) >= weekAgo).length
-      });
-
-    } catch (error) {
-      console.error('Erreur chargement données:', error);
-      toast.error('Erreur de connexion au serveur');
+  // Check if already authenticated (session storage)
+  useEffect(() => {
+    const authStatus = sessionStorage.getItem('adminAuthenticated');
+    if (authStatus === 'true') {
+      setIsAuthenticated(true);
     }
-    setLoading(false);
   }, []);
 
-  // Authentification
+  // Handle login
   const handleLogin = (e) => {
     e.preventDefault();
-    if (password === 'chabakapro2025') {
+    if (password === ADMIN_PASSWORD) {
       setIsAuthenticated(true);
-      localStorage.setItem('adminAuth', 'true');
-      localStorage.setItem('adminAuthTime', Date.now().toString());
-      toast.success('Bienvenue dans le Dashboard ChabakaPro!');
-      loadAllData();
+      sessionStorage.setItem('adminAuthenticated', 'true');
+      setPasswordError('');
     } else {
-      toast.error('Mot de passe incorrect');
+      setPasswordError('Mot de passe incorrect');
+      setPassword('');
     }
   };
 
+  // Handle logout
   const handleLogout = () => {
     setIsAuthenticated(false);
-    localStorage.removeItem('adminAuth');
-    localStorage.removeItem('adminAuthTime');
-    navigate('/');
+    sessionStorage.removeItem('adminAuthenticated');
+    setPassword('');
   };
 
-  // Vérifier session (expire après 24h)
+  // Fetch all data when authenticated
   useEffect(() => {
-    const auth = localStorage.getItem('adminAuth');
-    const authTime = localStorage.getItem('adminAuthTime');
-    const oneDayMs = 24 * 60 * 60 * 1000;
-    
-    if (auth === 'true' && authTime && (Date.now() - parseInt(authTime)) < oneDayMs) {
-      setIsAuthenticated(true);
-      loadAllData();
-    } else {
-      localStorage.removeItem('adminAuth');
-      localStorage.removeItem('adminAuthTime');
+    if (isAuthenticated) {
+      fetchAllData();
     }
-  }, [loadAllData]);
+  }, [isAuthenticated]);
 
-  const handleRefresh = async () => {
-    setRefreshing(true);
-    await loadAllData();
-    setRefreshing(false);
-    toast.success('Données actualisées');
+  const fetchAllData = async () => {
+    try {
+      setLoading(true);
+      
+      // Note: api interceptor already returns response.data
+      // So we get { success: true, data: [...], pagination: {...} } directly
+      const [blogsRes, portfoliosRes, contactsRes, devisRes, testimonialsRes] = await Promise.all([
+        api.get('/blog', { params: { published: 'all', limit: 1000 } }).catch((err) => { console.log('Blog error:', err); return { data: [] }; }),
+        api.get('/portfolio', { params: { published: 'all', limit: 1000 } }).catch((err) => { console.log('Portfolio error:', err); return { data: [] }; }),
+        api.get('/contact', { params: { limit: 100 } }).catch((err) => { console.log('Contact error:', err); return { data: [] }; }),
+        api.get('/devis', { params: { limit: 100 } }).catch((err) => { console.log('Devis error:', err); return { data: [] }; }),
+        api.get('/testimonials', { params: { published: 'all', limit: 100 } }).catch((err) => { console.log('Testimonials error:', err); return { data: [] }; })
+      ]);
+
+      console.log('API Responses:', { blogsRes, portfoliosRes, contactsRes, devisRes, testimonialsRes });
+
+      // Extract data arrays - API response format: { success, data, pagination }
+      // The interceptor returns response.data, so we get the object directly
+      const blogs = blogsRes?.data || blogsRes || [];
+      const portfolios = portfoliosRes?.data || portfoliosRes || [];
+      const contacts = contactsRes?.data || contactsRes || [];
+      const devis = devisRes?.data || devisRes || [];
+      const testimonials = testimonialsRes?.data || testimonialsRes || [];
+
+      console.log('Extracted data:', { blogs, portfolios, contacts, devis, testimonials });
+
+      setStats({
+        blogs: {
+          total: blogs.length,
+          published: blogs.filter(b => b.published).length,
+          featured: blogs.filter(b => b.featured).length
+        },
+        portfolios: {
+          total: portfolios.length,
+          published: portfolios.filter(p => p.published).length,
+          featured: portfolios.filter(p => p.featured).length,
+          totalInvestment: portfolios.reduce((sum, p) => sum + (p.investment || 0), 0)
+        },
+        contacts: {
+          total: contacts.length,
+          new: contacts.filter(c => c.status === 'nouveau' || c.status === 'new').length,
+          responded: contacts.filter(c => c.status === 'traite' || c.status === 'responded').length
+        },
+        devis: {
+          total: devis.length,
+          pending: devis.filter(d => d.status === 'nouveau' || d.status === 'pending' || d.status === 'en_attente').length,
+          approved: devis.filter(d => d.status === 'accepte' || d.status === 'approved').length
+        },
+        testimonials: {
+          total: testimonials.length,
+          verified: testimonials.filter(t => t.verified).length,
+          avgRating: testimonials.length > 0 
+            ? (testimonials.reduce((sum, t) => sum + (t.rating || 5), 0) / testimonials.length).toFixed(1)
+            : 5
+        },
+        visitors: { total: 0, today: 0, pageViews: 0 }
+      });
+
+      setRecentContacts(contacts.slice(0, 10));
+      setRecentDevis(devis.slice(0, 10));
+      setRecentTestimonials(testimonials.slice(0, 10));
+
+      // Fetch visitor stats
+      try {
+        const visitorStatsRes = await getVisitorStats(30);
+        const visitorsRes = await getVisitors({ limit: 50 });
+        
+        if (visitorStatsRes?.data) {
+          setVisitorStats(visitorStatsRes.data);
+          setStats(prev => ({
+            ...prev,
+            visitors: {
+              total: visitorStatsRes.data.totalVisitors || 0,
+              today: visitorStatsRes.data.todayVisitors || 0,
+              pageViews: visitorStatsRes.data.totalPageViews || 0
+            }
+          }));
+        }
+        
+        if (visitorsRes?.data) {
+          setVisitors(visitorsRes.data);
+        }
+      } catch (visitorError) {
+        console.log('Visitor stats not available:', visitorError);
+      }
+
+    } catch (error) {
+      console.error('Error fetching data:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  // Actions CRUD
+  // Update contact status
   const updateContactStatus = async (id, status) => {
     try {
-      await axios.patch(`${API_URL}/contact/${id}`, { status });
-      toast.success('Statut mis à jour');
-      loadAllData();
+      await api.patch(`/contact/${id}`, { status });
+      fetchAllData();
     } catch (error) {
-      toast.error('Erreur lors de la mise à jour');
+      console.error('Error updating contact:', error);
     }
   };
 
-  const deleteContact = async (id) => {
-    if (!window.confirm('Supprimer ce message de contact?')) return;
+  // Update devis status
+  const updateDevisStatus = async (id, status) => {
     try {
-      await axios.delete(`${API_URL}/contact/${id}`);
-      toast.success('Contact supprimé');
-      loadAllData();
+      await api.patch(`/devis/${id}`, { status });
+      fetchAllData();
     } catch (error) {
-      toast.error('Erreur lors de la suppression');
+      console.error('Error updating devis:', error);
     }
   };
 
-  const deleteDevis = async (id) => {
-    if (!window.confirm('Supprimer cette demande de devis?')) return;
-    try {
-      await axios.delete(`${API_URL}/devis/${id}`);
-      toast.success('Devis supprimé');
-      loadAllData();
-    } catch (error) {
-      toast.error('Erreur lors de la suppression');
-    }
-  };
-
-  const deleteTestimonial = async (id) => {
-    if (!window.confirm('Supprimer ce témoignage?')) return;
-    try {
-      await axios.delete(`${API_URL}/testimonials/${id}`);
-      toast.success('Témoignage supprimé');
-      loadAllData();
-    } catch (error) {
-      toast.error('Erreur lors de la suppression');
-    }
-  };
-
-  const toggleTestimonialStatus = async (id, currentStatus) => {
-    try {
-      await axios.patch(`${API_URL}/testimonials/${id}`, { published: !currentStatus });
-      toast.success('Statut mis à jour');
-      loadAllData();
-    } catch (error) {
-      toast.error('Erreur lors de la mise à jour');
-    }
-  };
-
-  // Copier dans le presse-papier
-  const copyToClipboard = (text) => {
-    navigator.clipboard.writeText(text);
-    toast.success('Copié!');
-  };
-
-  // Ouvrir WhatsApp
-  const openWhatsApp = (phone) => {
-    const cleanPhone = phone.replace(/[^0-9]/g, '');
-    window.open(`https://wa.me/${cleanPhone}`, '_blank');
-  };
-
-  // Filtrer les données
-  const filterData = (data) => {
-    return data.filter(item => {
-      const matchesSearch = !searchTerm || 
-        JSON.stringify(item).toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesStatus = statusFilter === 'all' || item.status === statusFilter;
-      return matchesSearch && matchesStatus;
-    });
-  };
-
-  // Format date
-  const formatDate = (dateStr) => {
-    const date = new Date(dateStr);
-    const now = new Date();
-    const diffMs = now - date;
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMs / 3600000);
-    const diffDays = Math.floor(diffMs / 86400000);
-
-    if (diffMins < 60) return `Il y a ${diffMins} min`;
-    if (diffHours < 24) return `Il y a ${diffHours}h`;
-    if (diffDays < 7) return `Il y a ${diffDays}j`;
-    return date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
-  };
-
-  // Modal pour voir les détails
-  const DetailModal = ({ item, type, onClose }) => {
-    if (!item) return null;
-    
-    return (
-      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
-        <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-          <div className="sticky top-0 bg-white border-b px-6 py-4 flex justify-between items-center">
-            <h3 className="text-xl font-bold">
-              {type === 'contact' ? 'Message de Contact' : 'Demande de Devis'}
-            </h3>
-            <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full">
-              <FaTimes />
-            </button>
-          </div>
-          
-          <div className="p-6 space-y-4">
-            {/* Info Client */}
-            <div className="bg-gray-50 rounded-xl p-4">
-              <h4 className="font-semibold text-gray-700 mb-3 flex items-center gap-2">
-                <FaUser className="text-blue-600" /> Informations Client
-              </h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div>
-                  <p className="text-sm text-gray-500">Nom</p>
-                  <p className="font-medium">{item.name}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Email</p>
-                  <div className="flex items-center gap-2">
-                    <p className="font-medium">{item.email}</p>
-                    <button onClick={() => copyToClipboard(item.email)} className="text-blue-600 hover:text-blue-800">
-                      <FaCopy size={12} />
-                    </button>
-                    <a href={`mailto:${item.email}`} className="text-blue-600 hover:text-blue-800">
-                      <FaExternalLinkAlt size={12} />
-                    </a>
-                  </div>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Téléphone</p>
-                  <div className="flex items-center gap-2">
-                    <p className="font-medium">{item.phone}</p>
-                    <button onClick={() => copyToClipboard(item.phone)} className="text-blue-600 hover:text-blue-800">
-                      <FaCopy size={12} />
-                    </button>
-                    <button onClick={() => openWhatsApp(item.phone)} className="text-green-600 hover:text-green-800">
-                      <FaWhatsapp size={14} />
-                    </button>
-                  </div>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Date</p>
-                  <p className="font-medium">{new Date(item.createdAt).toLocaleString('fr-FR')}</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Info Demande */}
-            {type === 'devis' && (
-              <div className="bg-blue-50 rounded-xl p-4">
-                <h4 className="font-semibold text-gray-700 mb-3 flex items-center gap-2">
-                  <FaFileInvoice className="text-blue-600" /> Détails du Devis
-                </h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <div>
-                    <p className="text-sm text-gray-500">Type Client</p>
-                    <p className="font-medium flex items-center gap-2">
-                      {item.clientType === 'entreprise' ? <FaBuilding /> : <FaHome />}
-                      {item.clientType}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-500">Service</p>
-                    <p className="font-medium">{item.service}</p>
-                  </div>
-                  {item.budget && (
-                    <div>
-                      <p className="text-sm text-gray-500">Budget</p>
-                      <p className="font-medium flex items-center gap-2">
-                        <FaMoneyBillWave className="text-green-600" />
-                        {item.budget}
-                      </p>
-                    </div>
-                  )}
-                  <div>
-                    <p className="text-sm text-gray-500">Urgence</p>
-                    <span className={`px-3 py-1 rounded-full text-sm ${
-                      item.urgency === 'urgent' ? 'bg-red-100 text-red-700' :
-                      item.urgency === 'normal' ? 'bg-blue-100 text-blue-700' :
-                      'bg-gray-100 text-gray-700'
-                    }`}>
-                      {item.urgency || 'Normal'}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {type === 'contact' && item.subject && (
-              <div className="bg-purple-50 rounded-xl p-4">
-                <h4 className="font-semibold text-gray-700 mb-2">Sujet</h4>
-                <p className="font-medium">{item.subject}</p>
-              </div>
-            )}
-
-            {/* Message */}
-            <div className="bg-gray-50 rounded-xl p-4">
-              <h4 className="font-semibold text-gray-700 mb-2">Message / Description</h4>
-              <p className="whitespace-pre-wrap text-gray-700">{item.message || item.description}</p>
-            </div>
-
-            {/* Actions */}
-            <div className="flex flex-wrap gap-3 pt-4 border-t">
-              <a 
-                href={`mailto:${item.email}?subject=Re: ${type === 'contact' ? item.subject || 'Votre message' : 'Votre demande de devis'}`}
-                className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition flex items-center justify-center gap-2"
-              >
-                <FaEnvelope /> Répondre par Email
-              </a>
-              <button 
-                onClick={() => openWhatsApp(item.phone)}
-                className="flex-1 bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition flex items-center justify-center gap-2"
-              >
-                <FaWhatsapp /> WhatsApp
-              </button>
-              <a 
-                href={`tel:${item.phone}`}
-                className="flex-1 bg-gray-600 text-white py-2 px-4 rounded-lg hover:bg-gray-700 transition flex items-center justify-center gap-2"
-              >
-                <FaPhone /> Appeler
-              </a>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  // Interface de connexion
+  // Login Screen
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 flex items-center justify-center px-4">
-        <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md">
-          <div className="text-center mb-8">
-            <div className="w-20 h-20 bg-blue-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-              <span className="text-3xl font-bold text-blue-600">CP</span>
-            </div>
-            <h1 className="text-2xl font-bold text-gray-800">Administration</h1>
-            <p className="text-gray-600 mt-2">ChabakaPro Dashboard</p>
-          </div>
-
-          <form onSubmit={handleLogin}>
-            <div className="mb-6">
-              <label className="block text-gray-700 font-medium mb-2">
-                Mot de passe administrateur
-              </label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-                placeholder="••••••••••••"
-                required
-              />
-            </div>
-
-            <button
-              type="submit"
-              className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-3 rounded-xl font-semibold hover:from-blue-700 hover:to-indigo-700 transition-all shadow-lg"
-            >
-              Se connecter
-            </button>
-          </form>
-
-          <div className="mt-6 text-center text-sm text-gray-500">
-            <p>🔒 Accès sécurisé réservé aux administrateurs</p>
-          </div>
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 flex items-center justify-center p-4">
+        {/* Background Effects */}
+        <div className="fixed inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute top-0 left-0 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl animate-pulse" />
+          <div className="absolute bottom-0 right-0 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl animate-pulse delay-1000" />
         </div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="relative z-10 w-full max-w-md"
+        >
+          <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-8 shadow-2xl">
+            <div className="text-center mb-8">
+              <div className="w-20 h-20 bg-gradient-to-br from-emerald-400 to-teal-500 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <FiLock className="w-10 h-10 text-white" />
+              </div>
+              <h1 className="text-2xl font-bold text-white mb-2">Administration</h1>
+              <p className="text-white/60">ChabakaPro - Tableau de bord</p>
+            </div>
+
+            <form onSubmit={handleLogin} className="space-y-6">
+              <div>
+                <label className="block text-white/70 text-sm font-medium mb-2">
+                  Mot de passe
+                </label>
+                <div className="relative">
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/40 focus:outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-400/20 transition-all"
+                    placeholder="Entrez le mot de passe admin"
+                    autoFocus
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-white/50 hover:text-white"
+                  >
+                    <FiEye className="w-5 h-5" />
+                  </button>
+                </div>
+                {passwordError && (
+                  <motion.p
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="mt-2 text-red-400 text-sm flex items-center gap-2"
+                  >
+                    <FiAlertCircle /> {passwordError}
+                  </motion.p>
+                )}
+              </div>
+
+              <button
+                type="submit"
+                className="w-full py-3 bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-semibold rounded-xl hover:from-emerald-600 hover:to-teal-600 transition-all transform hover:scale-[1.02] active:scale-[0.98]"
+              >
+                Accéder au Dashboard
+              </button>
+            </form>
+
+            <div className="mt-6 text-center">
+              <Link
+                to="/"
+                className="text-white/50 hover:text-white text-sm transition-colors inline-flex items-center gap-2"
+              >
+                <FiHome /> Retour au site
+              </Link>
+            </div>
+          </div>
+        </motion.div>
       </div>
     );
   }
 
-  // Dashboard Admin
+  // Quick Stats Cards
+  const quickStats = [
+    {
+      label: 'Articles Blog',
+      value: stats.blogs.total,
+      icon: FiBookOpen,
+      color: 'bg-emerald-500',
+      change: `${stats.blogs.published} publiés`
+    },
+    {
+      label: 'Projets Portfolio',
+      value: stats.portfolios.total,
+      icon: FiBriefcase,
+      color: 'bg-purple-500',
+      change: `${stats.portfolios.published} publiés`
+    },
+    {
+      label: 'Messages Contact',
+      value: stats.contacts.total,
+      icon: FiMail,
+      color: 'bg-blue-500',
+      change: `${stats.contacts.new} nouveaux`
+    },
+    {
+      label: 'Demandes Devis',
+      value: stats.devis.total,
+      icon: FiMessageSquare,
+      color: 'bg-orange-500',
+      change: `${stats.devis.pending} en attente`
+    },
+    {
+      label: 'Témoignages',
+      value: stats.testimonials.total,
+      icon: FiStar,
+      color: 'bg-amber-500',
+      change: `★ ${stats.testimonials.avgRating} moyenne`
+    },
+    {
+      label: 'Investissement Total',
+      value: `${((stats.portfolios.totalInvestment || 0) / 1000).toFixed(0)}K`,
+      icon: FiTrendingUp,
+      color: 'bg-cyan-500',
+      change: 'MAD'
+    }
+  ];
+
+  const menuItems = [
+    {
+      title: 'Gestion du Blog',
+      description: 'Créer et gérer vos articles',
+      icon: FiBookOpen,
+      link: '/admin/blog',
+      color: 'from-emerald-500 to-teal-500',
+      stats: [
+        { label: 'Total', value: stats.blogs.total },
+        { label: 'Publiés', value: stats.blogs.published }
+      ]
+    },
+    {
+      title: 'Gestion Portfolio',
+      description: 'Gérer vos projets clients',
+      icon: FiBriefcase,
+      link: '/admin/portfolio',
+      color: 'from-violet-500 to-purple-500',
+      stats: [
+        { label: 'Projets', value: stats.portfolios.total },
+        { label: 'Publiés', value: stats.portfolios.published }
+      ]
+    }
+  ];
+
+  const getStatusColor = (status) => {
+    const colors = {
+      'nouveau': 'bg-blue-500',
+      'new': 'bg-blue-500',
+      'en_cours': 'bg-yellow-500',
+      'pending': 'bg-yellow-500',
+      'en_attente': 'bg-yellow-500',
+      'traite': 'bg-green-500',
+      'responded': 'bg-green-500',
+      'accepte': 'bg-green-500',
+      'approved': 'bg-green-500',
+      'refuse': 'bg-red-500',
+      'rejected': 'bg-red-500'
+    };
+    return colors[status] || 'bg-gray-500';
+  };
+
+  const getStatusLabel = (status) => {
+    const labels = {
+      'nouveau': 'Nouveau',
+      'new': 'Nouveau',
+      'en_cours': 'En cours',
+      'pending': 'En attente',
+      'en_attente': 'En attente',
+      'traite': 'Traité',
+      'responded': 'Répondu',
+      'accepte': 'Accepté',
+      'approved': 'Approuvé',
+      'refuse': 'Refusé',
+      'rejected': 'Rejeté'
+    };
+    return labels[status] || status;
+  };
+
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
+      {/* Animated Background */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-0 left-0 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl animate-pulse" />
+        <div className="absolute bottom-0 right-0 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl animate-pulse delay-1000" />
+        <div className="absolute top-1/2 left-1/2 w-72 h-72 bg-blue-500/10 rounded-full blur-3xl animate-pulse delay-500" />
+      </div>
+
       {/* Header */}
-      <header className="bg-white shadow-sm border-b sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
-          <div className="flex items-center gap-4">
-            <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center">
-              <span className="text-lg font-bold text-white">CP</span>
+      <header className="relative z-10 border-b border-white/10 bg-black/20 backdrop-blur-xl sticky top-0">
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <button
+                onClick={() => setSidebarOpen(!sidebarOpen)}
+                className="lg:hidden p-2 text-white/70 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+              >
+                {sidebarOpen ? <FiX className="w-6 h-6" /> : <FiMenu className="w-6 h-6" />}
+              </button>
+              <div>
+                <h1 className="text-2xl font-bold text-white">
+                  ChabakaPro <span className="text-emerald-400">Admin</span>
+                </h1>
+                <p className="text-sm text-white/60">Tableau de bord d'administration</p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-xl font-bold text-gray-800">ChabakaPro Admin</h1>
-              <p className="text-xs text-gray-500">Tableau de bord</p>
+            
+            <div className="flex items-center gap-4">
+              <button
+                onClick={fetchAllData}
+                className="flex items-center gap-2 px-4 py-2 text-white/70 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+                title="Rafraîchir"
+              >
+                <FiRefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
+              </button>
+              <Link
+                to="/"
+                className="flex items-center gap-2 px-4 py-2 text-white/70 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+              >
+                <FiHome className="w-5 h-5" />
+                <span className="hidden sm:inline">Site Public</span>
+              </Link>
+              <button
+                onClick={handleLogout}
+                className="flex items-center gap-2 px-4 py-2 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg transition-colors"
+              >
+                <FiLogOut className="w-5 h-5" />
+                <span className="hidden sm:inline">Déconnexion</span>
+              </button>
             </div>
-          </div>
-          
-          <div className="flex items-center gap-3">
-            <button
-              onClick={handleRefresh}
-              disabled={refreshing}
-              className={`p-2 rounded-lg hover:bg-gray-100 transition ${refreshing ? 'animate-spin' : ''}`}
-              title="Actualiser"
-            >
-              <FaSync className="text-gray-600" />
-            </button>
-            <button
-              onClick={handleLogout}
-              className="flex items-center gap-2 px-4 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition"
-            >
-              <FaSignOutAlt />
-              <span className="hidden sm:inline">Déconnexion</span>
-            </button>
           </div>
         </div>
       </header>
 
-      <div className="max-w-7xl mx-auto px-4 py-6">
-        {/* Stats Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl p-4 text-white">
-            <div className="flex justify-between items-start">
-              <div>
-                <p className="text-blue-100 text-sm">Messages</p>
-                <h3 className="text-3xl font-bold">{stats.totalContacts}</h3>
-                {stats.pendingContacts > 0 && (
-                  <p className="text-blue-200 text-sm mt-1 flex items-center gap-1">
-                    <FaExclamationTriangle /> {stats.pendingContacts} en attente
-                  </p>
-                )}
-              </div>
-              <FaEnvelope className="text-3xl text-blue-200" />
-            </div>
-            {stats.todayContacts > 0 && (
-              <div className="mt-2 pt-2 border-t border-blue-400">
-                <p className="text-xs text-blue-200">+{stats.todayContacts} aujourd'hui</p>
-              </div>
-            )}
-          </div>
-
-          <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-2xl p-4 text-white">
-            <div className="flex justify-between items-start">
-              <div>
-                <p className="text-green-100 text-sm">Devis</p>
-                <h3 className="text-3xl font-bold">{stats.totalDevis}</h3>
-                {stats.pendingDevis > 0 && (
-                  <p className="text-green-200 text-sm mt-1 flex items-center gap-1">
-                    <FaExclamationTriangle /> {stats.pendingDevis} en attente
-                  </p>
-                )}
-              </div>
-              <FaFileInvoice className="text-3xl text-green-200" />
-            </div>
-            {stats.todayDevis > 0 && (
-              <div className="mt-2 pt-2 border-t border-green-400">
-                <p className="text-xs text-green-200">+{stats.todayDevis} aujourd'hui</p>
-              </div>
-            )}
-          </div>
-
-          <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl p-4 text-white">
-            <div className="flex justify-between items-start">
-              <div>
-                <p className="text-purple-100 text-sm">Blog</p>
-                <h3 className="text-3xl font-bold">{stats.totalBlogs}</h3>
-              </div>
-              <FaBlog className="text-3xl text-purple-200" />
-            </div>
-          </div>
-
-          <div className="bg-gradient-to-br from-yellow-500 to-orange-500 rounded-2xl p-4 text-white">
-            <div className="flex justify-between items-start">
-              <div>
-                <p className="text-yellow-100 text-sm">Témoignages</p>
-                <h3 className="text-3xl font-bold">{stats.totalTestimonials}</h3>
-              </div>
-              <FaStar className="text-3xl text-yellow-200" />
-            </div>
-          </div>
-        </div>
-
-        {/* Tabs Navigation */}
-        <div className="bg-white rounded-2xl shadow-sm mb-6 overflow-x-auto">
-          <div className="flex border-b min-w-max">
+      {/* Tab Navigation */}
+      <div className="relative z-10 border-b border-white/10 bg-black/10 backdrop-blur-sm">
+        <div className="container mx-auto px-4">
+          <div className="flex gap-1 overflow-x-auto py-2">
             {[
-              { id: 'dashboard', label: 'Dashboard', icon: FaChartLine },
-              { id: 'contacts', label: `Messages (${stats.totalContacts})`, icon: FaEnvelope },
-              { id: 'devis', label: `Devis (${stats.totalDevis})`, icon: FaFileInvoice },
-              { id: 'testimonials', label: 'Témoignages', icon: FaStar },
-              { id: 'blogs', label: 'Blog', icon: FaBlog },
-              { id: 'portfolios', label: 'Portfolio', icon: FaBriefcase }
-            ].map(tab => (
+              { id: 'dashboard', label: 'Dashboard', icon: FiActivity },
+              { id: 'visitors', label: 'Visiteurs', icon: FiUsers, badge: stats.visitors.today },
+              { id: 'contacts', label: 'Contacts', icon: FiMail, badge: stats.contacts.new },
+              { id: 'devis', label: 'Devis', icon: FiMessageSquare, badge: stats.devis.pending },
+              { id: 'testimonials', label: 'Témoignages', icon: FiStar }
+            ].map((tab) => (
               <button
                 key={tab.id}
-                onClick={() => { setActiveTab(tab.id); setSearchTerm(''); setStatusFilter('all'); }}
-                className={`flex items-center gap-2 px-6 py-4 font-medium transition-colors whitespace-nowrap ${
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all whitespace-nowrap ${
                   activeTab === tab.id
-                    ? 'border-b-2 border-blue-600 text-blue-600 bg-blue-50'
-                    : 'text-gray-600 hover:text-blue-600 hover:bg-gray-50'
+                    ? 'bg-emerald-500 text-white'
+                    : 'text-white/60 hover:text-white hover:bg-white/10'
                 }`}
               >
-                <tab.icon />
+                <tab.icon className="w-4 h-4" />
                 {tab.label}
+                {tab.badge > 0 && (
+                  <span className="px-2 py-0.5 bg-red-500 text-white text-xs rounded-full">
+                    {tab.badge}
+                  </span>
+                )}
               </button>
             ))}
           </div>
         </div>
-
-        {/* Search & Filter Bar */}
-        {(activeTab === 'contacts' || activeTab === 'devis') && (
-          <div className="bg-white rounded-xl shadow-sm p-4 mb-6 flex flex-wrap gap-4">
-            <div className="flex-1 min-w-[200px] relative">
-              <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Rechercher..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
-            </div>
-            <div className="flex items-center gap-2">
-              <FaFilter className="text-gray-400" />
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              >
-                <option value="all">Tous les statuts</option>
-                <option value="pending">En attente</option>
-                <option value="processed">Traité</option>
-                <option value="closed">Fermé</option>
-              </select>
-            </div>
-          </div>
-        )}
-
-        {/* Tab Content */}
-        <div className="bg-white rounded-2xl shadow-sm">
-          {loading ? (
-            <div className="text-center py-16">
-              <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-600 border-t-transparent mx-auto"></div>
-              <p className="text-gray-600 mt-4">Chargement des données...</p>
-            </div>
-          ) : (
-            <>
-              {/* Dashboard Tab */}
-              {activeTab === 'dashboard' && (
-                <div className="p-6">
-                  <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
-                    <FaChartBar className="text-blue-600" /> Vue d'ensemble
-                  </h2>
-                  
-                  {/* Weekly Stats */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-                    <div className="bg-blue-50 rounded-xl p-4">
-                      <h3 className="font-semibold text-blue-800 mb-2">Cette semaine</h3>
-                      <div className="flex gap-6">
-                        <div>
-                          <p className="text-3xl font-bold text-blue-600">{stats.weekContacts}</p>
-                          <p className="text-sm text-blue-600">messages</p>
-                        </div>
-                        <div>
-                          <p className="text-3xl font-bold text-green-600">{stats.weekDevis}</p>
-                          <p className="text-sm text-green-600">devis</p>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div className="bg-orange-50 rounded-xl p-4">
-                      <h3 className="font-semibold text-orange-800 mb-2">À traiter</h3>
-                      <div className="flex gap-6">
-                        <div>
-                          <p className="text-3xl font-bold text-orange-600">{stats.pendingContacts}</p>
-                          <p className="text-sm text-orange-600">messages</p>
-                        </div>
-                        <div>
-                          <p className="text-3xl font-bold text-orange-600">{stats.pendingDevis}</p>
-                          <p className="text-sm text-orange-600">devis</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    {/* Derniers contacts */}
-                    <div className="border rounded-xl">
-                      <div className="px-4 py-3 border-b bg-gray-50 rounded-t-xl">
-                        <h3 className="font-bold flex items-center gap-2">
-                          <FaEnvelope className="text-blue-600" />
-                          Derniers messages
-                        </h3>
-                      </div>
-                      <div className="divide-y max-h-80 overflow-y-auto">
-                        {contacts.length === 0 ? (
-                          <p className="p-4 text-gray-500 text-center">Aucun message</p>
-                        ) : contacts.slice(0, 5).map(contact => (
-                          <div 
-                            key={contact._id} 
-                            className="p-4 hover:bg-gray-50 cursor-pointer transition"
-                            onClick={() => { setSelectedItem(contact); setShowModal('contact'); }}
-                          >
-                            <div className="flex justify-between items-start">
-                              <div className="flex-1 min-w-0">
-                                <p className="font-semibold truncate">{contact.name}</p>
-                                <p className="text-sm text-gray-600 truncate">{contact.email}</p>
-                                <p className="text-sm text-gray-500 mt-1 truncate">{contact.subject || contact.message?.substring(0, 50)}</p>
-                              </div>
-                              <div className="ml-3 flex flex-col items-end gap-1">
-                                <span className={`px-2 py-1 rounded-full text-xs ${
-                                  contact.status === 'pending' ? 'bg-orange-100 text-orange-700' :
-                                  contact.status === 'processed' ? 'bg-green-100 text-green-700' :
-                                  'bg-gray-100 text-gray-700'
-                                }`}>
-                                  {contact.status === 'pending' ? 'En attente' : 
-                                   contact.status === 'processed' ? 'Traité' : 'Fermé'}
-                                </span>
-                                <span className="text-xs text-gray-400">{formatDate(contact.createdAt)}</span>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Derniers devis */}
-                    <div className="border rounded-xl">
-                      <div className="px-4 py-3 border-b bg-gray-50 rounded-t-xl">
-                        <h3 className="font-bold flex items-center gap-2">
-                          <FaFileInvoice className="text-green-600" />
-                          Dernières demandes de devis
-                        </h3>
-                      </div>
-                      <div className="divide-y max-h-80 overflow-y-auto">
-                        {devis.length === 0 ? (
-                          <p className="p-4 text-gray-500 text-center">Aucun devis</p>
-                        ) : devis.slice(0, 5).map(d => (
-                          <div 
-                            key={d._id} 
-                            className="p-4 hover:bg-gray-50 cursor-pointer transition"
-                            onClick={() => { setSelectedItem(d); setShowModal('devis'); }}
-                          >
-                            <div className="flex justify-between items-start">
-                              <div className="flex-1 min-w-0">
-                                <p className="font-semibold truncate">{d.name}</p>
-                                <p className="text-sm text-gray-600 truncate">{d.email}</p>
-                                <p className="text-sm text-gray-500 mt-1">
-                                  <span className="inline-flex items-center gap-1">
-                                    {d.clientType === 'entreprise' ? <FaBuilding size={10} /> : <FaUser size={10} />}
-                                    {d.service}
-                                  </span>
-                                </p>
-                              </div>
-                              <div className="ml-3 flex flex-col items-end gap-1">
-                                <span className={`px-2 py-1 rounded-full text-xs ${
-                                  d.urgency === 'urgent' ? 'bg-red-100 text-red-700' :
-                                  d.urgency === 'normal' ? 'bg-blue-100 text-blue-700' :
-                                  'bg-gray-100 text-gray-700'
-                                }`}>
-                                  {d.urgency || 'Normal'}
-                                </span>
-                                <span className="text-xs text-gray-400">{formatDate(d.createdAt)}</span>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Contacts Tab */}
-              {activeTab === 'contacts' && (
-                <div className="p-6">
-                  <h2 className="text-2xl font-bold text-gray-800 mb-6">Messages de contact</h2>
-                  
-                  {filterData(contacts).length === 0 ? (
-                    <div className="text-center py-12">
-                      <FaEnvelopeOpen className="text-6xl text-gray-300 mx-auto mb-4" />
-                      <p className="text-gray-500">Aucun message {statusFilter !== 'all' && `avec le statut "${statusFilter}"`}</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      {filterData(contacts).map(contact => (
-                        <div 
-                          key={contact._id} 
-                          className={`border rounded-xl p-4 hover:shadow-md transition cursor-pointer ${
-                            contact.status === 'pending' ? 'border-l-4 border-l-orange-500' : ''
-                          }`}
-                          onClick={() => { setSelectedItem(contact); setShowModal('contact'); }}
-                        >
-                          <div className="flex justify-between items-start">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-3 mb-2">
-                                <h3 className="font-bold text-lg">{contact.name}</h3>
-                                <span className={`px-2 py-1 rounded-full text-xs ${
-                                  contact.status === 'pending' ? 'bg-orange-100 text-orange-700' :
-                                  contact.status === 'processed' ? 'bg-green-100 text-green-700' :
-                                  'bg-gray-100 text-gray-700'
-                                }`}>
-                                  {contact.status === 'pending' ? 'En attente' : 
-                                   contact.status === 'processed' ? 'Traité' : 'Fermé'}
-                                </span>
-                              </div>
-                              <div className="flex flex-wrap gap-4 text-sm text-gray-600 mb-2">
-                                <span className="flex items-center gap-1"><FaEnvelope /> {contact.email}</span>
-                                <span className="flex items-center gap-1"><FaPhone /> {contact.phone}</span>
-                                <span className="flex items-center gap-1"><FaClock /> {formatDate(contact.createdAt)}</span>
-                              </div>
-                              {contact.subject && (
-                                <p className="text-sm font-medium text-blue-600 mb-1">Sujet: {contact.subject}</p>
-                              )}
-                              <p className="text-gray-700 line-clamp-2">{contact.message}</p>
-                            </div>
-                            <div className="flex gap-2 ml-4" onClick={e => e.stopPropagation()}>
-                              <select
-                                value={contact.status}
-                                onChange={(e) => updateContactStatus(contact._id, e.target.value)}
-                                className="text-sm border rounded-lg px-2 py-1 focus:ring-2 focus:ring-blue-500"
-                              >
-                                <option value="pending">En attente</option>
-                                <option value="processed">Traité</option>
-                                <option value="closed">Fermé</option>
-                              </select>
-                              <button
-                                onClick={() => deleteContact(contact._id)}
-                                className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition"
-                              >
-                                <FaTrash />
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Devis Tab */}
-              {activeTab === 'devis' && (
-                <div className="p-6">
-                  <h2 className="text-2xl font-bold text-gray-800 mb-6">Demandes de devis</h2>
-                  
-                  {filterData(devis).length === 0 ? (
-                    <div className="text-center py-12">
-                      <FaFileInvoice className="text-6xl text-gray-300 mx-auto mb-4" />
-                      <p className="text-gray-500">Aucune demande de devis</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      {filterData(devis).map(d => (
-                        <div 
-                          key={d._id} 
-                          className={`border rounded-xl p-4 hover:shadow-md transition cursor-pointer ${
-                            d.urgency === 'urgent' ? 'border-l-4 border-l-red-500' : ''
-                          }`}
-                          onClick={() => { setSelectedItem(d); setShowModal('devis'); }}
-                        >
-                          <div className="flex justify-between items-start mb-3">
-                            <div>
-                              <div className="flex items-center gap-3 mb-1">
-                                <h3 className="font-bold text-lg">{d.name}</h3>
-                                <span className={`px-2 py-1 rounded-full text-xs flex items-center gap-1 ${
-                                  d.clientType === 'entreprise' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'
-                                }`}>
-                                  {d.clientType === 'entreprise' ? <FaBuilding size={10} /> : <FaUser size={10} />}
-                                  {d.clientType}
-                                </span>
-                              </div>
-                              <div className="flex flex-wrap gap-4 text-sm text-gray-600">
-                                <span className="flex items-center gap-1"><FaEnvelope /> {d.email}</span>
-                                <span className="flex items-center gap-1"><FaPhone /> {d.phone}</span>
-                                <span className="flex items-center gap-1"><FaClock /> {formatDate(d.createdAt)}</span>
-                              </div>
-                            </div>
-                            <div className="flex gap-2" onClick={e => e.stopPropagation()}>
-                              <span className={`px-3 py-1 rounded-full text-sm ${
-                                d.urgency === 'urgent' ? 'bg-red-100 text-red-700' :
-                                d.urgency === 'normal' ? 'bg-blue-100 text-blue-700' :
-                                'bg-gray-100 text-gray-700'
-                              }`}>
-                                {d.urgency || 'Normal'}
-                              </span>
-                              <button
-                                onClick={() => deleteDevis(d._id)}
-                                className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition"
-                              >
-                                <FaTrash />
-                              </button>
-                            </div>
-                          </div>
-                          
-                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm bg-gray-50 rounded-lg p-3">
-                            <div>
-                              <p className="text-gray-500">Service</p>
-                              <p className="font-semibold">{d.service}</p>
-                            </div>
-                            <div>
-                              <p className="text-gray-500">Budget</p>
-                              <p className="font-semibold">{d.budget || 'Non spécifié'}</p>
-                            </div>
-                            {d.company && (
-                              <div>
-                                <p className="text-gray-500">Entreprise</p>
-                                <p className="font-semibold">{d.company}</p>
-                              </div>
-                            )}
-                          </div>
-                          
-                          {(d.message || d.description) && (
-                            <p className="mt-3 text-gray-700 line-clamp-2">{d.message || d.description}</p>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Testimonials Tab */}
-              {activeTab === 'testimonials' && (
-                <div className="p-6">
-                  <h2 className="text-2xl font-bold text-gray-800 mb-6">Témoignages</h2>
-                  
-                  {testimonials.length === 0 ? (
-                    <div className="text-center py-12">
-                      <FaStar className="text-6xl text-gray-300 mx-auto mb-4" />
-                      <p className="text-gray-500">Aucun témoignage</p>
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {testimonials.map(t => (
-                        <div key={t._id} className="border rounded-xl p-4 hover:shadow-md transition">
-                          <div className="flex justify-between items-start mb-3">
-                            <div>
-                              <h3 className="font-bold">{t.name}</h3>
-                              <p className="text-sm text-gray-600">{t.company || t.location}</p>
-                            </div>
-                            <div className="flex gap-2">
-                              <button
-                                onClick={() => toggleTestimonialStatus(t._id, t.published)}
-                                className={`p-2 rounded-lg transition ${
-                                  t.published ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                                }`}
-                                title={t.published ? 'Publié - Cliquer pour masquer' : 'Masqué - Cliquer pour publier'}
-                              >
-                                {t.published ? <FaCheck /> : <FaTimes />}
-                              </button>
-                              <button
-                                onClick={() => deleteTestimonial(t._id)}
-                                className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition"
-                              >
-                                <FaTrash />
-                              </button>
-                            </div>
-                          </div>
-                          
-                          <div className="flex items-center gap-1 mb-3">
-                            {[...Array(5)].map((_, i) => (
-                              <FaStar 
-                                key={i} 
-                                className={i < t.rating ? 'text-yellow-400' : 'text-gray-300'}
-                              />
-                            ))}
-                            <span className="text-sm text-gray-500 ml-2">({t.rating}/5)</span>
-                          </div>
-                          
-                          <p className="text-gray-700 italic">"{t.text}"</p>
-                          
-                          <div className="mt-3 pt-3 border-t flex flex-wrap gap-2 text-xs">
-                            <span className="text-gray-500">{formatDate(t.createdAt)}</span>
-                            {t.verified && (
-                              <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full flex items-center gap-1">
-                                <FaCheckCircle size={10} /> Vérifié
-                              </span>
-                            )}
-                            {t.featured && (
-                              <span className="px-2 py-1 bg-purple-100 text-purple-700 rounded-full">
-                                ⭐ En vedette
-                              </span>
-                            )}
-                            <span className={`px-2 py-1 rounded-full ${
-                              t.published ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
-                            }`}>
-                              {t.published ? 'Publié' : 'Masqué'}
-                            </span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Blogs Tab */}
-              {activeTab === 'blogs' && (
-                <div className="p-6">
-                  <h2 className="text-2xl font-bold text-gray-800 mb-6">Articles de blog</h2>
-                  
-                  {blogs.length === 0 ? (
-                    <div className="text-center py-12">
-                      <FaBlog className="text-6xl text-gray-300 mx-auto mb-4" />
-                      <p className="text-gray-500">Aucun article de blog</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      {blogs.map(blog => (
-                        <div key={blog._id} className="border rounded-xl p-4 hover:shadow-md transition">
-                          <div className="flex justify-between items-start">
-                            <div className="flex-1">
-                              <h3 className="font-bold text-lg mb-2">{blog.title}</h3>
-                              <p className="text-gray-600 text-sm mb-3 line-clamp-2">{blog.excerpt}</p>
-                              
-                              <div className="flex flex-wrap gap-2 items-center text-sm">
-                                <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full">
-                                  {blog.category}
-                                </span>
-                                <span className="flex items-center gap-1 text-gray-600">
-                                  <FaEye /> {blog.views || 0} vues
-                                </span>
-                                <span className="flex items-center gap-1 text-gray-600">
-                                  <FaCalendar /> {formatDate(blog.createdAt)}
-                                </span>
-                                <span className={`px-2 py-1 rounded-full ${
-                                  blog.published ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
-                                }`}>
-                                  {blog.published ? 'Publié' : 'Brouillon'}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Portfolios Tab */}
-              {activeTab === 'portfolios' && (
-                <div className="p-6">
-                  <h2 className="text-2xl font-bold text-gray-800 mb-6">Portfolio</h2>
-                  
-                  {portfolios.length === 0 ? (
-                    <div className="text-center py-12">
-                      <FaBriefcase className="text-6xl text-gray-300 mx-auto mb-4" />
-                      <p className="text-gray-500">Aucun projet dans le portfolio</p>
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      {portfolios.map(p => (
-                        <div key={p._id} className="border rounded-xl overflow-hidden hover:shadow-lg transition">
-                          {p.image && (
-                            <img 
-                              src={p.image} 
-                              alt={p.title} 
-                              className="w-full h-48 object-cover"
-                            />
-                          )}
-                          <div className="p-4">
-                            <h3 className="font-bold text-lg mb-2">{p.title}</h3>
-                            <p className="text-gray-600 text-sm mb-3">{p.client}</p>
-                            
-                            <div className="space-y-2 text-sm">
-                              <div className="flex justify-between">
-                                <span className="text-gray-500">Catégorie:</span>
-                                <span className="font-semibold">{p.category}</span>
-                              </div>
-                              
-                              {p.investment && (
-                                <div className="flex justify-between">
-                                  <span className="text-gray-500">Investissement:</span>
-                                  <span className="font-semibold text-green-600">{p.investment} MAD</span>
-                                </div>
-                              )}
-                            </div>
-                            
-                            {p.technologies && p.technologies.length > 0 && (
-                              <div className="mt-3 pt-3 border-t">
-                                <div className="flex flex-wrap gap-1">
-                                  {p.technologies.map((tech, i) => (
-                                    <span key={i} className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs">
-                                      {tech}
-                                    </span>
-                                  ))}
-                                </div>
-                              </div>
-                            )}
-                            
-                            <div className="mt-3 text-xs text-gray-500">
-                              {formatDate(p.createdAt)}
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-            </>
-          )}
-        </div>
       </div>
 
-      {/* Detail Modal */}
-      {showModal && (
-        <DetailModal 
-          item={selectedItem} 
-          type={showModal} 
-          onClose={() => { setShowModal(false); setSelectedItem(null); }} 
-        />
-      )}
+      {/* Main Content */}
+      <main className="relative z-10 container mx-auto px-4 py-8">
+        <AnimatePresence mode="wait">
+          {/* Dashboard Tab */}
+          {activeTab === 'dashboard' && (
+            <motion.div
+              key="dashboard"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+            >
+              {/* Welcome Section */}
+              <div className="mb-8">
+                <h2 className="text-3xl font-bold text-white mb-2">
+                  Bienvenue sur votre Dashboard 👋
+                </h2>
+                <p className="text-white/60">
+                  Gérez votre contenu, contacts et demandes de devis
+                </p>
+              </div>
+
+              {/* Quick Stats */}
+              <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-8">
+                {quickStats.map((stat, index) => (
+                  <motion.div
+                    key={stat.label}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.1 }}
+                    className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-5 hover:bg-white/10 transition-all group"
+                  >
+                    <div className="flex items-center justify-between mb-3">
+                      <div className={`p-3 ${stat.color} rounded-xl group-hover:scale-110 transition-transform`}>
+                        <stat.icon className="w-5 h-5 text-white" />
+                      </div>
+                      <FiActivity className="w-5 h-5 text-white/30" />
+                    </div>
+                    <div className="text-2xl font-bold text-white mb-1">{stat.value}</div>
+                    <div className="text-sm text-white/60">{stat.label}</div>
+                    <div className="text-xs text-emerald-400 mt-1">{stat.change}</div>
+                  </motion.div>
+                ))}
+              </div>
+
+              {/* Management Cards */}
+              <h3 className="text-xl font-semibold text-white mb-4">Gestion du Contenu</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                {menuItems.map((item, index) => (
+                  <motion.div
+                    key={item.title}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.2 + index * 0.1 }}
+                  >
+                    <Link
+                      to={item.link}
+                      className="block bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6 hover:bg-white/10 transition-all group"
+                    >
+                      <div className="flex items-start justify-between mb-4">
+                        <div className={`p-4 bg-gradient-to-br ${item.color} rounded-2xl group-hover:scale-110 transition-transform`}>
+                          <item.icon className="w-8 h-8 text-white" />
+                        </div>
+                        <div className="flex gap-2">
+                          {item.stats.map((stat, i) => (
+                            <div key={i} className="text-center px-3 py-1 bg-white/5 rounded-lg">
+                              <div className="text-lg font-bold text-white">{stat.value}</div>
+                              <div className="text-xs text-white/50">{stat.label}</div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      
+                      <h3 className="text-xl font-bold text-white mb-2 group-hover:text-emerald-400 transition-colors">
+                        {item.title}
+                      </h3>
+                      <p className="text-white/60 mb-4">{item.description}</p>
+                      
+                      <div className="flex items-center text-emerald-400 font-medium group-hover:gap-3 transition-all gap-2">
+                        <span>Accéder</span>
+                        <span className="group-hover:translate-x-1 transition-transform">→</span>
+                      </div>
+                    </Link>
+                  </motion.div>
+                ))}
+              </div>
+
+              {/* Quick Actions */}
+              <h3 className="text-xl font-semibold text-white mb-4">Actions Rapides</h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {[
+                  { label: 'Nouvel Article', icon: FiBookOpen, link: '/admin/blog', color: 'text-emerald-400' },
+                  { label: 'Nouveau Projet', icon: FiBriefcase, link: '/admin/portfolio', color: 'text-purple-400' },
+                  { label: 'Voir le Blog', icon: FiEye, link: '/blog', color: 'text-blue-400' },
+                  { label: 'Voir Portfolio', icon: FiEye, link: '/portfolio', color: 'text-amber-400' }
+                ].map((action, index) => (
+                  <motion.div
+                    key={action.label}
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: 0.4 + index * 0.1 }}
+                  >
+                    <Link
+                      to={action.link}
+                      className="flex flex-col items-center justify-center gap-3 p-6 bg-white/5 border border-white/10 rounded-2xl hover:bg-white/10 transition-all group"
+                    >
+                      <action.icon className={`w-8 h-8 ${action.color} group-hover:scale-110 transition-transform`} />
+                      <span className="text-sm font-medium text-white/80 group-hover:text-white text-center">
+                        {action.label}
+                      </span>
+                    </Link>
+                  </motion.div>
+                ))}
+              </div>
+            </motion.div>
+          )}
+
+          {/* Visitors Tab */}
+          {activeTab === 'visitors' && (
+            <motion.div
+              key="visitors"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+            >
+              <div className="mb-6">
+                <h2 className="text-2xl font-bold text-white mb-2">Analytiques Visiteurs</h2>
+                <p className="text-white/60">Suivez les visiteurs de votre site en temps réel</p>
+              </div>
+
+              {/* Visitor Stats Cards */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-5">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="p-2 bg-blue-500/20 rounded-lg">
+                      <FiUsers className="w-5 h-5 text-blue-400" />
+                    </div>
+                    <span className="text-white/60 text-sm">Total Visiteurs</span>
+                  </div>
+                  <div className="text-3xl font-bold text-white">{visitorStats?.totalVisitors || 0}</div>
+                  <div className="text-xs text-white/40 mt-1">30 derniers jours</div>
+                </div>
+                
+                <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-5">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="p-2 bg-emerald-500/20 rounded-lg">
+                      <FiTrendingUp className="w-5 h-5 text-emerald-400" />
+                    </div>
+                    <span className="text-white/60 text-sm">Aujourd'hui</span>
+                  </div>
+                  <div className="text-3xl font-bold text-white">{visitorStats?.todayVisitors || 0}</div>
+                  <div className="text-xs text-emerald-400 mt-1">visiteurs actifs</div>
+                </div>
+                
+                <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-5">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="p-2 bg-purple-500/20 rounded-lg">
+                      <FiEye className="w-5 h-5 text-purple-400" />
+                    </div>
+                    <span className="text-white/60 text-sm">Pages Vues</span>
+                  </div>
+                  <div className="text-3xl font-bold text-white">{visitorStats?.totalPageViews || 0}</div>
+                  <div className="text-xs text-white/40 mt-1">total des vues</div>
+                </div>
+                
+                <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-5">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="p-2 bg-amber-500/20 rounded-lg">
+                      <FiRefreshCw className="w-5 h-5 text-amber-400" />
+                    </div>
+                    <span className="text-white/60 text-sm">Retours</span>
+                  </div>
+                  <div className="text-3xl font-bold text-white">{visitorStats?.returningVisitors || 0}</div>
+                  <div className="text-xs text-white/40 mt-1">visiteurs fidèles</div>
+                </div>
+              </div>
+
+              {/* Device & Browser Stats */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                {/* Device Stats */}
+                <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6">
+                  <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                    <FiMonitor className="w-5 h-5 text-cyan-400" />
+                    Appareils
+                  </h3>
+                  <div className="space-y-3">
+                    {Object.entries(visitorStats?.deviceStats || {}).map(([device, count]) => (
+                      <div key={device} className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          {device === 'mobile' && <FiSmartphone className="w-4 h-4 text-white/60" />}
+                          {device === 'desktop' && <FiMonitor className="w-4 h-4 text-white/60" />}
+                          {device === 'tablet' && <FiMonitor className="w-4 h-4 text-white/60" />}
+                          {device === 'unknown' && <FiGlobe className="w-4 h-4 text-white/60" />}
+                          <span className="text-white/80 capitalize">{device}</span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <div className="w-24 h-2 bg-white/10 rounded-full overflow-hidden">
+                            <div 
+                              className="h-full bg-cyan-500 rounded-full"
+                              style={{ 
+                                width: `${visitorStats?.totalVisitors ? (count / visitorStats.totalVisitors * 100) : 0}%` 
+                              }}
+                            />
+                          </div>
+                          <span className="text-white/60 text-sm w-8 text-right">{count}</span>
+                        </div>
+                      </div>
+                    ))}
+                    {Object.keys(visitorStats?.deviceStats || {}).length === 0 && (
+                      <p className="text-white/40 text-center py-4">Aucune donnée</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Browser Stats */}
+                <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6">
+                  <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                    <FiGlobe className="w-5 h-5 text-purple-400" />
+                    Navigateurs
+                  </h3>
+                  <div className="space-y-3">
+                    {Object.entries(visitorStats?.browserStats || {}).map(([browser, count]) => (
+                      <div key={browser} className="flex items-center justify-between">
+                        <span className="text-white/80">{browser}</span>
+                        <div className="flex items-center gap-3">
+                          <div className="w-24 h-2 bg-white/10 rounded-full overflow-hidden">
+                            <div 
+                              className="h-full bg-purple-500 rounded-full"
+                              style={{ 
+                                width: `${visitorStats?.totalVisitors ? (count / visitorStats.totalVisitors * 100) : 0}%` 
+                              }}
+                            />
+                          </div>
+                          <span className="text-white/60 text-sm w-8 text-right">{count}</span>
+                        </div>
+                      </div>
+                    ))}
+                    {Object.keys(visitorStats?.browserStats || {}).length === 0 && (
+                      <p className="text-white/40 text-center py-4">Aucune donnée</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Top Pages */}
+              <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6 mb-8">
+                <h3 className="text-lg font-semibold text-white mb-4">Pages les Plus Visitées</h3>
+                <div className="space-y-2">
+                  {(visitorStats?.topPages || []).slice(0, 10).map((page, index) => (
+                    <div key={page._id} className="flex items-center justify-between py-2 border-b border-white/5 last:border-0">
+                      <div className="flex items-center gap-3">
+                        <span className="text-white/40 text-sm w-6">{index + 1}.</span>
+                        <span className="text-white/80">{page._id || '/'}</span>
+                      </div>
+                      <span className="text-cyan-400 font-medium">{page.views} vues</span>
+                    </div>
+                  ))}
+                  {(!visitorStats?.topPages || visitorStats.topPages.length === 0) && (
+                    <p className="text-white/40 text-center py-4">Aucune donnée de pages</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Recent Visitors Table */}
+              <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden">
+                <div className="p-4 border-b border-white/10">
+                  <h3 className="text-lg font-semibold text-white">Visiteurs Récents</h3>
+                </div>
+                {visitors.length === 0 ? (
+                  <div className="p-12 text-center text-white/50">
+                    <FiUsers className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                    <p>Aucun visiteur enregistré</p>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="text-left text-white/60 text-sm border-b border-white/10">
+                          <th className="px-4 py-3">Appareil</th>
+                          <th className="px-4 py-3">Navigateur</th>
+                          <th className="px-4 py-3">OS</th>
+                          <th className="px-4 py-3">Pages Vues</th>
+                          <th className="px-4 py-3">Dernière Activité</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {visitors.slice(0, 20).map((visitor) => (
+                          <tr key={visitor._id} className="border-b border-white/5 hover:bg-white/5">
+                            <td className="px-4 py-3">
+                              <div className="flex items-center gap-2">
+                                {visitor.device?.type === 'mobile' && <FiSmartphone className="w-4 h-4 text-cyan-400" />}
+                                {visitor.device?.type === 'desktop' && <FiMonitor className="w-4 h-4 text-purple-400" />}
+                                {visitor.device?.type === 'tablet' && <FiMonitor className="w-4 h-4 text-amber-400" />}
+                                {(!visitor.device?.type || visitor.device?.type === 'unknown') && <FiGlobe className="w-4 h-4 text-gray-400" />}
+                                <span className="text-white capitalize">{visitor.device?.type || 'unknown'}</span>
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 text-white/80">{visitor.device?.browser || 'unknown'}</td>
+                            <td className="px-4 py-3 text-white/80">{visitor.device?.os || 'unknown'}</td>
+                            <td className="px-4 py-3">
+                              <span className="px-2 py-1 bg-cyan-500/20 text-cyan-400 rounded text-sm">
+                                {visitor.pageViews || 0}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 text-white/60 text-sm">
+                              {new Date(visitor.lastActivity).toLocaleString('fr-FR')}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          )}
+
+          {/* Contacts Tab */}
+          {activeTab === 'contacts' && (
+            <motion.div
+              key="contacts"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+            >
+              <div className="mb-6">
+                <h2 className="text-2xl font-bold text-white mb-2">Messages de Contact</h2>
+                <p className="text-white/60">Gérez les messages reçus via le formulaire de contact</p>
+              </div>
+
+              <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden">
+                {recentContacts.length === 0 ? (
+                  <div className="p-12 text-center text-white/50">
+                    <FiMail className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                    <p>Aucun message de contact</p>
+                  </div>
+                ) : (
+                  <div className="divide-y divide-white/10">
+                    {recentContacts.map((contact) => (
+                      <div key={contact._id} className="p-6 hover:bg-white/5 transition-colors">
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-3 mb-2">
+                              <h4 className="font-semibold text-white">{contact.name}</h4>
+                              <span className={`px-2 py-0.5 ${getStatusColor(contact.status)} text-white text-xs rounded-full`}>
+                                {getStatusLabel(contact.status)}
+                              </span>
+                            </div>
+                            <p className="text-white/60 text-sm mb-2">{contact.email} • {contact.phone}</p>
+                            <p className="text-white/80 text-sm line-clamp-2">{contact.message}</p>
+                            <p className="text-white/40 text-xs mt-2">
+                              {new Date(contact.createdAt).toLocaleDateString('fr-FR', {
+                                day: 'numeric',
+                                month: 'long',
+                                year: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              })}
+                            </p>
+                          </div>
+                          <div className="flex gap-2">
+                            {contact.status === 'nouveau' && (
+                              <button
+                                onClick={() => updateContactStatus(contact._id, 'traite')}
+                                className="p-2 bg-green-500/20 text-green-400 rounded-lg hover:bg-green-500/30 transition-colors"
+                                title="Marquer comme traité"
+                              >
+                                <FiCheckCircle className="w-5 h-5" />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          )}
+
+          {/* Devis Tab */}
+          {activeTab === 'devis' && (
+            <motion.div
+              key="devis"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+            >
+              <div className="mb-6">
+                <h2 className="text-2xl font-bold text-white mb-2">Demandes de Devis</h2>
+                <p className="text-white/60">Gérez les demandes de devis reçues</p>
+              </div>
+
+              <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden">
+                {recentDevis.length === 0 ? (
+                  <div className="p-12 text-center text-white/50">
+                    <FiMessageSquare className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                    <p>Aucune demande de devis</p>
+                  </div>
+                ) : (
+                  <div className="divide-y divide-white/10">
+                    {recentDevis.map((devis) => (
+                      <div key={devis._id} className="p-6 hover:bg-white/5 transition-colors">
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-3 mb-2">
+                              <h4 className="font-semibold text-white">{devis.name}</h4>
+                              <span className={`px-2 py-0.5 ${getStatusColor(devis.status)} text-white text-xs rounded-full`}>
+                                {getStatusLabel(devis.status)}
+                              </span>
+                              {devis.urgence === 'urgent' && (
+                                <span className="px-2 py-0.5 bg-red-500 text-white text-xs rounded-full">
+                                  Urgent
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-white/60 text-sm mb-2">
+                              {devis.email} • {devis.phone} • {devis.clientType === 'entreprise' ? 'Entreprise' : 'Particulier'}
+                            </p>
+                            <p className="text-cyan-400 text-sm font-medium mb-1">Service: {devis.service}</p>
+                            <p className="text-white/80 text-sm line-clamp-2">{devis.description}</p>
+                            <p className="text-white/40 text-xs mt-2">
+                              {new Date(devis.createdAt).toLocaleDateString('fr-FR', {
+                                day: 'numeric',
+                                month: 'long',
+                                year: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              })}
+                            </p>
+                          </div>
+                          <div className="flex gap-2">
+                            {(devis.status === 'nouveau' || devis.status === 'en_attente') && (
+                              <>
+                                <button
+                                  onClick={() => updateDevisStatus(devis._id, 'accepte')}
+                                  className="p-2 bg-green-500/20 text-green-400 rounded-lg hover:bg-green-500/30 transition-colors"
+                                  title="Accepter"
+                                >
+                                  <FiCheckCircle className="w-5 h-5" />
+                                </button>
+                                <button
+                                  onClick={() => updateDevisStatus(devis._id, 'refuse')}
+                                  className="p-2 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30 transition-colors"
+                                  title="Refuser"
+                                >
+                                  <FiX className="w-5 h-5" />
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          )}
+
+          {/* Testimonials Tab */}
+          {activeTab === 'testimonials' && (
+            <motion.div
+              key="testimonials"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+            >
+              <div className="mb-6">
+                <h2 className="text-2xl font-bold text-white mb-2">Témoignages Clients</h2>
+                <p className="text-white/60">Gérez les avis et témoignages de vos clients</p>
+              </div>
+
+              <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden">
+                {recentTestimonials.length === 0 ? (
+                  <div className="p-12 text-center text-white/50">
+                    <FiStar className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                    <p>Aucun témoignage</p>
+                  </div>
+                ) : (
+                  <div className="divide-y divide-white/10">
+                    {recentTestimonials.map((testimonial) => (
+                      <div key={testimonial._id} className="p-6 hover:bg-white/5 transition-colors">
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-3 mb-2">
+                              <h4 className="font-semibold text-white">{testimonial.name}</h4>
+                              <div className="flex gap-0.5">
+                                {[...Array(5)].map((_, i) => (
+                                  <FiStar
+                                    key={i}
+                                    className={`w-4 h-4 ${i < testimonial.rating ? 'text-amber-400 fill-current' : 'text-white/20'}`}
+                                  />
+                                ))}
+                              </div>
+                              {testimonial.verified && (
+                                <span className="px-2 py-0.5 bg-green-500 text-white text-xs rounded-full flex items-center gap-1">
+                                  <FiCheckCircle className="w-3 h-3" /> Vérifié
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-white/60 text-sm mb-2">{testimonial.company || testimonial.service}</p>
+                            <p className="text-white/80 text-sm line-clamp-3">"{testimonial.comment}"</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </main>
     </div>
   );
 };

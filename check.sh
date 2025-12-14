@@ -63,16 +63,16 @@ fi
 echo ""
 echo "🔌 Vérification des ports..."
 
-if ! lsof -Pi :3000 -sTCP:LISTEN -t >/dev/null 2>&1; then
-    echo -e "${GREEN}✓${NC} Port 3000 disponible (Frontend)"
+if ! lsof -Pi :4000 -sTCP:LISTEN -t >/dev/null 2>&1; then
+    echo -e "${GREEN}✓${NC} Port 4000 disponible (Frontend)"
 else
-    echo -e "${YELLOW}⚠${NC} Port 3000 déjà utilisé"
+    echo -e "${YELLOW}⚠${NC} Port 4000 déjà utilisé"
 fi
 
-if ! lsof -Pi :5000 -sTCP:LISTEN -t >/dev/null 2>&1; then
-    echo -e "${GREEN}✓${NC} Port 5000 disponible (Backend)"
+if ! lsof -Pi :5001 -sTCP:LISTEN -t >/dev/null 2>&1; then
+    echo -e "${GREEN}✓${NC} Port 5001 disponible (Backend)"
 else
-    echo -e "${YELLOW}⚠${NC} Port 5000 déjà utilisé"
+    echo -e "${YELLOW}⚠${NC} Port 5001 déjà utilisé"
 fi
 
 if ! lsof -Pi :27017 -sTCP:LISTEN -t >/dev/null 2>&1; then
@@ -110,8 +110,8 @@ if [ -f ".env" ] && command -v docker &> /dev/null; then
     echo "  ${GREEN}./start.sh${NC}"
     echo ""
     echo "Accès:"
-    echo "  Frontend: ${GREEN}http://localhost:3000${NC}"
-    echo "  Backend:  ${GREEN}http://localhost:5000${NC}"
+    echo "  Frontend: ${GREEN}http://localhost:4000${NC}"
+    echo "  Backend:  ${GREEN}http://localhost:5001${NC}"
 else
     echo -e "${YELLOW}⚠${NC} Configuration incomplète"
     echo ""

@@ -18,7 +18,7 @@ services:
     networks:
       - chabakapro_network
 
-  # Backend API (Node.js + Express)
+  # Backend API (Node.js + Express) - avec hot reload via nodemon
   backend:
     build:
       context: ./backend
@@ -34,33 +34,31 @@ services:
       EMAIL_PORT: 587
       EMAIL_USER: contact@techsolutions-casa.ma
       EMAIL_PASS: your_email_password
-      FRONTEND_URL: https://www.chabakapro.com
+      FRONTEND_URL: http://localhost:4000
     ports:
       - "5001:5000"
     depends_on:
       - mongodb
     volumes:
-      - ./backend:/usr/src/app:cached
+      - ./backend/src:/usr/src/app/src:cached
       - /usr/src/app/node_modules
     networks:
       - chabakapro_network
 
-  # Frontend (React)
+  # Frontend - Nginx servant les fichiers buildés avec VOLUME
+  # Les modifications sont visibles après: npm run build (pas besoin de rebuild docker)
   frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-      args:
-        REACT_APP_API_URL: http://localhost:5001/api
-        REACT_APP_WHATSAPP_NUMBER: 212722618635
-        REACT_APP_PHONE_NUMBER: +212 722-618635
-        REACT_APP_EMAIL: abdellaherraoui3@gmail.com
+    image: nginx:alpine
     container_name: chabakapro_frontend
     restart: unless-stopped
     ports:
       - "4000:80"
     depends_on:
       - backend
+    volumes:
+      # VOLUME: Les fichiers build sont montés - pas besoin de rebuild le conteneur
+      - ./frontend/build:/usr/share/nginx/html:ro
+      - ./frontend/nginx.conf:/etc/nginx/conf.d/default.conf:ro
     networks:
       - chabakapro_network
 

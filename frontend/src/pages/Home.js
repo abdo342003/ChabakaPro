@@ -16,7 +16,7 @@ import {
   FaClock
 } from 'react-icons/fa';
 import SEO from '../components/common/SEO';
-import VideoHero from '../components/common/VideoHero';
+import HeroSlider from '../components/common/HeroSlider';
 import WhatsAppButton from '../components/common/WhatsAppButton';
 import { getPortfolioStats } from '../services/apiService';
 import { logButtonClick } from '../utils/analytics';
@@ -158,76 +158,9 @@ const Home = () => {
         keywords="dépannage informatique Casablanca, réparation PC, installation Wi-Fi, services IT Maroc"
       />
 
-      {/* Hero Section - Enhanced dual messaging */}
-      <section className="relative text-white pt-24 pb-16 overflow-hidden min-h-[700px] flex items-center">
-        <VideoHero />
-        
-        <div className="container mx-auto px-4 relative z-10">
-          <div className="max-w-5xl">
-            <div className="bg-gradient-to-r from-black/80 via-black/60 to-transparent backdrop-blur-md rounded-3xl p-8 md:p-12 border border-white/10">
-              <h1 className="text-4xl md:text-6xl lg:text-7xl font-heading font-extrabold mb-6 fade-in drop-shadow-2xl">
-                {t('hero.title')} <span className="text-cyan-400">{t('hero.location')}</span>
-              </h1>
-              
-              {/* Dual tagline - simple + tech */}
-              <div className="mb-8 space-y-2">
-                <p className="text-2xl md:text-4xl font-bold text-white drop-shadow-lg">
-                  {t('hero.tagline')}
-                </p>
-                <p className="text-lg md:text-xl text-cyan-300 font-medium">
-                  <span className="bg-cyan-900/50 px-3 py-1 rounded">{t('hero.infra')}</span> · 
-                  <span className="bg-blue-900/50 px-3 py-1 rounded ml-2">{t('hero.security')}</span> · 
-                  <span className="bg-purple-900/50 px-3 py-1 rounded ml-2">{t('hero.support')}</span>
-                </p>
-              </div>
-              
-              {/* Trust indicators */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
-                <div className="bg-white/10 backdrop-blur-sm px-4 py-3 rounded-xl border border-white/20 text-center">
-                  <div className="text-2xl font-bold text-cyan-400">⚡ 2h</div>
-                  <div className="text-xs">{t('hero.urgentIntervention')}</div>
-                </div>
-                <div className="bg-white/10 backdrop-blur-sm px-4 py-3 rounded-xl border border-white/20 text-center">
-                  <div className="text-2xl font-bold text-green-400">✓ 500+</div>
-                  <div className="text-xs">{t('hero.satisfiedClients')}</div>
-                </div>
-                <div className="bg-white/10 backdrop-blur-sm px-4 py-3 rounded-xl border border-white/20 text-center">
-                  <div className="text-2xl font-bold text-yellow-400">🏆 10{t('hero.years')}</div>
-                  <div className="text-xs">{t('hero.experience')}</div>
-                </div>
-                <div className="bg-white/10 backdrop-blur-sm px-4 py-3 rounded-xl border border-white/20 text-center">
-                  <div className="text-2xl font-bold text-orange-400">💰 200</div>
-                  <div className="text-xs">{t('hero.from')} MAD</div>
-                </div>
-              </div>
-              
-              <div className="flex flex-col sm:flex-row gap-4">
-                <Link 
-                  to="/contact" 
-                  className="group btn bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white text-xl px-12 py-5 shadow-2xl transform hover:scale-110 transition-all duration-300 font-extrabold rounded-2xl"
-                  onClick={() => logButtonClick('Hero - Devis Gratuit')}
-                >
-                  🎁 {t('hero.freeQuote').toUpperCase()}
-                  <FaArrowRight className="inline ml-2 group-hover:ml-4 transition-all" />
-                </Link>
-                <a 
-                  href={`tel:${process.env.REACT_APP_PHONE_NUMBER}`}
-                  className="btn bg-white/20 backdrop-blur-md border-2 border-white text-white hover:bg-white hover:text-gray-900 text-xl px-12 py-5 shadow-xl transform hover:scale-105 transition-all duration-300 font-bold rounded-2xl"
-                  onClick={() => logButtonClick('Hero - Appeler')}
-                >
-                  <FaPhone className="inline mr-2 animate-pulse" />
-                  {t('hero.emergency').toUpperCase()}
-                </a>
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 animate-bounce">
-          <div className="w-6 h-10 border-2 border-white/50 rounded-full flex justify-center pt-2">
-            <div className="w-1 h-3 bg-white/70 rounded-full"></div>
-          </div>
-        </div>
+      {/* Hero Section with Image Slider */}
+      <section className="relative">
+        <HeroSlider autoPlay={true} interval={5000} />
       </section>
 
       {/* Services Particuliers - Dual language (simple + tech) */}

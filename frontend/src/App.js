@@ -5,6 +5,7 @@ import 'react-toastify/dist/ReactToastify.css';
 
 // Analytics - import before lazy components
 import { initGA, logPageView } from './utils/analytics';
+import { initTracking, trackPageVisit } from './services/visitorTracking';
 
 // Components
 import Navbar from './components/layout/Navbar';
@@ -26,6 +27,8 @@ const BlogPost = lazy(() => import('./pages/BlogPost'));
 const Contact = lazy(() => import('./pages/Contact'));
 const NotFound = lazy(() => import('./pages/NotFound'));
 const Admin = lazy(() => import('./pages/Admin'));
+const AdminBlog = lazy(() => import('./pages/admin/AdminBlog'));
+const AdminPortfolio = lazy(() => import('./pages/admin/AdminPortfolio'));
 
 // Page loading component
 const PageLoader = () => (
@@ -42,11 +45,16 @@ function App() {
     if (process.env.REACT_APP_GOOGLE_ANALYTICS_ID) {
       initGA();
     }
+    
+    // Initialize visitor tracking
+    initTracking();
   }, []);
 
   // Log page views on route change
   useEffect(() => {
     logPageView(location.pathname + location.search);
+    // Track page visit for our analytics
+    trackPageVisit(document.title);
   }, [location]);
 
   return (
@@ -68,6 +76,8 @@ function App() {
               <Route path="/blog/:slug" element={<BlogPost />} />
               <Route path="/contact" element={<Contact />} />
               <Route path="/admin-dashboard-chabakapro" element={<Admin />} />
+              <Route path="/admin/blog" element={<AdminBlog />} />
+              <Route path="/admin/portfolio" element={<AdminPortfolio />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>

@@ -3,7 +3,6 @@ import { Link, useLocation } from 'react-router-dom';
 import { FaBars, FaTimes, FaPhone } from 'react-icons/fa';
 import Logo from '../common/Logo';
 import ThemeToggle from '../common/ThemeToggle';
-import LanguageSelector from '../common/LanguageSelector';
 import { useLanguage } from '../../context/LanguageContext';
 
 const Navbar = () => {
@@ -14,9 +13,8 @@ const Navbar = () => {
 
   useEffect(() => {
     const handleScroll = () => {
-      setScrolled(window.scrollY > 50);
+      setScrolled(window.scrollY > 10);
     };
-
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
@@ -27,151 +25,117 @@ const Navbar = () => {
 
   const navLinks = [
     { name: t('nav.home'), path: '/' },
-    {
-      name: t('nav.services'),
-      submenu: [
-        { name: t('nav.servicesIndividuals'), path: '/services/particuliers' },
-        { name: t('nav.servicesBusiness'), path: '/services/entreprises' }
-      ]
-    },
+    { name: t('nav.servicesIndividuals') || 'Particuliers', path: '/services/particuliers' },
+    { name: t('nav.servicesBusiness') || 'Entreprises', path: '/services/entreprises' },
     { name: t('nav.portfolio'), path: '/portfolio' },
     { name: t('nav.blog'), path: '/blog' },
     { name: t('nav.about'), path: '/a-propos' },
     { name: t('nav.contact'), path: '/contact' }
   ];
 
+  const isActive = (path) => location.pathname === path;
+
   return (
-    <nav
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-        scrolled ? 'bg-white dark:bg-gray-900 shadow-lg' : 'bg-white dark:bg-gray-900'
-      }`}
-    >
-      <div className="container mx-auto px-4">
-        <div className="flex items-center justify-between h-20">
+    <header className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+      scrolled 
+        ? 'bg-white dark:bg-gray-900 shadow-md' 
+        : 'bg-white dark:bg-gray-900'
+    }`}>
+      <nav className="container mx-auto px-4">
+        <div className="flex items-center justify-between h-16 lg:h-18">
+          
           {/* Logo */}
-          <Link to="/" className="flex items-center">
-            <Logo className="h-12" />
+          <Link to="/" className="flex-shrink-0">
+            <Logo className="h-10" />
           </Link>
 
           {/* Desktop Navigation */}
-          <div className="hidden lg:flex items-center space-x-8">
-            {navLinks.map((link, index) => (
-              <div key={index} className="relative group">
-                {link.submenu ? (
-                  <>
-                    <button className="text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white font-medium transition-colors">
-                      {link.name}
-                    </button>
-                    <div className="absolute left-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 border border-gray-200 dark:border-gray-700">
-                      {link.submenu.map((sublink, subindex) => (
-                        <Link
-                          key={subindex}
-                          to={sublink.path}
-                          className="block px-4 py-3 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors first:rounded-t-lg last:rounded-b-lg"
-                        >
-                          {sublink.name}
-                        </Link>
-                      ))}
-                    </div>
-                  </>
-                ) : (
-                  <Link
-                    to={link.path}
-                    className={`text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white font-medium transition-colors ${
-                      location.pathname === link.path ? 'text-gray-900 dark:text-white font-bold' : ''
-                    }`}
-                  >
-                    {link.name}
-                  </Link>
-                )}
-              </div>
+          <div className="hidden lg:flex items-center space-x-1">
+            {navLinks.map((link) => (
+              <Link
+                key={link.path}
+                to={link.path}
+                className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                  isActive(link.path)
+                    ? 'text-cyan-600 dark:text-cyan-400 bg-cyan-50 dark:bg-cyan-900/20'
+                    : 'text-gray-600 dark:text-gray-300 hover:text-cyan-600 dark:hover:text-cyan-400 hover:bg-gray-50 dark:hover:bg-gray-800'
+                }`}
+              >
+                {link.name}
+              </Link>
             ))}
           </div>
 
-          {/* CTA Buttons */}
-          <div className="hidden lg:flex items-center space-x-4">
-            <LanguageSelector />
+          {/* Desktop CTA */}
+          <div className="hidden lg:flex items-center gap-4">
             <ThemeToggle />
             <a
-              href={`tel:${process.env.REACT_APP_PHONE_NUMBER}`}
-              className="flex items-center space-x-2 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors"
+              href={`tel:${process.env.REACT_APP_PHONE_NUMBER || '+212722618635'}`}
+              className="flex items-center gap-2 text-gray-600 dark:text-gray-300 hover:text-cyan-600 dark:hover:text-cyan-400 transition-colors"
             >
-              <FaPhone />
-              <span className="font-medium">{t('cta.callUs')}</span>
+              <FaPhone className="text-sm" />
+              <span className="text-sm font-medium">{process.env.REACT_APP_PHONE_NUMBER || '+212 722-618635'}</span>
             </a>
             <Link
               to="/contact"
-              className="btn btn-primary"
+              className="px-5 py-2 bg-cyan-600 hover:bg-cyan-700 text-white text-sm font-semibold rounded-lg transition-colors"
             >
-              {t('hero.freeQuote')}
+              {t('hero.freeQuote') || 'Devis Gratuit'}
             </Link>
           </div>
 
-          {/* Mobile Menu Button */}
-          <button
-            onClick={() => setIsOpen(!isOpen)}
-            className="lg:hidden text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white transition-colors"
-          >
-            {isOpen ? <FaTimes size={24} /> : <FaBars size={24} />}
-          </button>
-        </div>
-      </div>
-
-      {/* Mobile Menu */}
-      <div
-        className={`lg:hidden bg-white dark:bg-gray-900 border-t dark:border-gray-800 transition-all duration-300 ${
-          isOpen ? 'max-h-screen opacity-100' : 'max-h-0 opacity-0 overflow-hidden'
-        }`}
-      >
-        <div className="container mx-auto px-4 py-4 space-y-4">
-          {navLinks.map((link, index) => (
-            <div key={index}>
-              {link.submenu ? (
-                <>
-                  <p className="font-medium text-gray-700 dark:text-gray-200 mb-2">{link.name}</p>
-                  <div className="pl-4 space-y-2">
-                    {link.submenu.map((sublink, subindex) => (
-                      <Link
-                        key={subindex}
-                        to={sublink.path}
-                        className="block text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
-                      >
-                        {sublink.name}
-                      </Link>
-                    ))}
-                  </div>
-                </>
-              ) : (
-                <Link
-                  to={link.path}
-                  className={`block text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white font-medium transition-colors ${
-                    location.pathname === link.path ? 'text-gray-900 dark:text-white font-bold' : ''
-                  }`}
-                >
-                  {link.name}
-                </Link>
-              )}
-            </div>
-          ))}
-          <div className="pt-4 space-y-2">
-            <div className="flex justify-center gap-4 mb-3">
-              <LanguageSelector />
-              <ThemeToggle />
-            </div>
-            <a
-              href={`tel:${process.env.REACT_APP_PHONE_NUMBER}`}
-              className="flex items-center justify-center space-x-2 btn btn-outline w-full"
+          {/* Mobile: Theme Toggle + Menu Button */}
+          <div className="flex items-center gap-2 lg:hidden">
+            <ThemeToggle />
+            <button
+              onClick={() => setIsOpen(!isOpen)}
+              className="p-2 text-gray-600 dark:text-gray-300 hover:text-cyan-600 dark:hover:text-cyan-400 rounded-md"
+              aria-label="Toggle menu"
             >
-              <FaPhone />
-              <span>{t('cta.callUs')}</span>
-            </a>
-            <Link to="/contact" className="btn btn-primary w-full text-center">
-              {t('hero.freeQuote')}
-            </Link>
+              {isOpen ? <FaTimes size={22} /> : <FaBars size={22} />}
+            </button>
           </div>
         </div>
-      </div>
-    </nav>
+
+        {/* Mobile Menu */}
+        <div className={`lg:hidden transition-all duration-300 overflow-hidden ${
+          isOpen ? 'max-h-[500px] pb-4' : 'max-h-0'
+        }`}>
+          <div className="pt-2 space-y-1 border-t border-gray-100 dark:border-gray-800">
+            {navLinks.map((link) => (
+              <Link
+                key={link.path}
+                to={link.path}
+                className={`block px-3 py-2.5 text-sm font-medium rounded-md transition-colors ${
+                  isActive(link.path)
+                    ? 'text-cyan-600 dark:text-cyan-400 bg-cyan-50 dark:bg-cyan-900/20'
+                    : 'text-gray-600 dark:text-gray-300 hover:text-cyan-600 dark:hover:text-cyan-400 hover:bg-gray-50 dark:hover:bg-gray-800'
+                }`}
+              >
+                {link.name}
+              </Link>
+            ))}
+            
+            {/* Mobile CTA */}
+            <div className="pt-3 mt-2 border-t border-gray-100 dark:border-gray-800 space-y-2">
+              <a
+                href={`tel:${process.env.REACT_APP_PHONE_NUMBER || '+212722618635'}`}
+                className="flex items-center justify-center gap-2 px-4 py-2.5 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-700 rounded-lg text-sm font-medium"
+              >
+                <FaPhone />
+                <span>{process.env.REACT_APP_PHONE_NUMBER || '+212 722-618635'}</span>
+              </a>
+              <Link
+                to="/contact"
+                className="block text-center px-4 py-2.5 bg-cyan-600 hover:bg-cyan-700 text-white text-sm font-semibold rounded-lg transition-colors"
+              >
+                {t('hero.freeQuote') || 'Devis Gratuit'}
+              </Link>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
   );
 };
 

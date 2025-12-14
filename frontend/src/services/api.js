@@ -9,7 +9,7 @@ const getBaseURL = () => {
   
   // Production: Use Cloudflare Tunnel
   if (isProduction) {
-    return 'https://church-pushed-mere-annually.trycloudflare.com/api';
+    return 'https://marijuana-suffered-favorites-heritage.trycloudflare.com/api';
   }
   
   // If explicitly set via env var, use that

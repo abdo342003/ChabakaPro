@@ -1,0 +1,83 @@
+version: '3.3'
+
+services:
+  # MongoDB Database
+  mongodb:
+    image: mongo:7.0
+    container_name: chabakapro_mongodb
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: chabakapro2025
+      MONGO_INITDB_DATABASE: chabakapro
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+      - ./backend/init-mongo.js:/docker-entrypoint-initdb.d/init-mongo.js:ro
+    networks:
+      - chabakapro_network
+
+  # Backend API (Node.js + Express) - avec hot reload
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: chabakapro_backend
+    restart: unless-stopped
+    environment:
+      NODE_ENV: development
+      PORT: 5000
+      MONGODB_URI: mongodb://admin:chabakapro2025@mongodb:27017/chabakapro?authSource=admin
+      JWT_SECRET: chabakapro_jwt_secret_key_2025
+      EMAIL_HOST: smtp.gmail.com
+      EMAIL_PORT: 587
+      EMAIL_USER: contact@techsolutions-casa.ma
+      EMAIL_PASS: your_email_password
+      FRONTEND_URL: http://localhost:4000
+    ports:
+      - "5001:5000"
+    depends_on:
+      - mongodb
+    volumes:
+      - ./backend/src:/usr/src/app/src:cached
+      - /usr/src/app/node_modules
+    networks:
+      - chabakapro_network
+
+  # Frontend (React) - Mode développement avec hot reload
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    container_name: chabakapro_frontend
+    restart: always
+    environment:
+      - BROWSER=none
+      - CHOKIDAR_USEPOLLING=true
+      - WATCHPACK_POLLING=true
+      - WDS_SOCKET_PORT=0
+      - REACT_APP_API_URL=http://localhost:5001/api
+      - REACT_APP_WHATSAPP_NUMBER=212722618635
+      - REACT_APP_PHONE_NUMBER=+212 722-618635
+      - REACT_APP_EMAIL=abdellaherraoui3@gmail.com
+    ports:
+      - "4000:6000"
+    depends_on:
+      - backend
+    volumes:
+      - ./frontend/src:/app/src:cached
+      - ./frontend/public:/app/public:cached
+      - /app/node_modules
+    stdin_open: true
+    tty: true
+    networks:
+      - chabakapro_network
+
+volumes:
+  mongodb_data:
+    driver: local
+
+networks:
+  chabakapro_network:
+    driver: bridge

@@ -63,13 +63,13 @@ Le projet ChabakaPro est 100% terminé et prêt à être lancé avec Docker !
     Cela va:
     - Construire les 3 conteneurs
     - Démarrer MongoDB avec données de démo
-    - Lancer le backend sur le port 5000
-    - Lancer le frontend sur le port 3000
+    - Lancer le backend sur le port 5001
+    - Lancer le frontend sur le port 4000
 
 3️⃣  ACCÉDER AU SITE
 
-    Frontend:    http://localhost:3000
-    Backend API: http://localhost:5000
+    Frontend:    http://localhost:4000
+    Backend API: http://localhost:5001
     MongoDB:     mongodb://localhost:27017
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -180,7 +180,7 @@ OurProject/
 
 1. ✏️  Éditer .env avec vos vraies valeurs
 2. 🚀 Lancer avec ./start.sh
-3. 🌐 Ouvrir http://localhost:3000
+3. 🌐 Ouvrir http://localhost:4000
 4. ✅ Tester tous les formulaires
 5. 🖼️  Ajouter vos vraies images
 6. 📝 Remplacer le contenu de démo
@@ -220,7 +220,7 @@ Tools:    Git, ESLint, Prettier
 
               Exécutez:  ./start.sh
               
-              Puis ouvrez: http://localhost:3000
+              Puis ouvrez: http://localhost:4000
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 

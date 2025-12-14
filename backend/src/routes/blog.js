@@ -21,7 +21,10 @@ router.get('/', async (req, res) => {
     if (category) query.category = category;
     if (tag) query.tags = tag;
     if (featured) query.featured = featured === 'true';
-    if (published) query.published = published === 'true';
+    // Only filter by published if not 'all'
+    if (published && published !== 'all') {
+      query.published = published === 'true';
+    }
     
     // Recherche texte
     if (search) {

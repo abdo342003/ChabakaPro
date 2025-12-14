@@ -8,7 +8,7 @@ echo "╚═══════════════════════�
 echo ""
 echo "🔐 Accès Admin Dashboard"
 echo ""
-echo "📍 URL: http://localhost:3000/admin-dashboard-chabakapro"
+echo "📍 URL: http://localhost:4000/admin-dashboard-chabakapro"
 echo "🔑 Mot de passe: admin2025"
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -37,7 +37,7 @@ echo ""
 if command -v xdg-open &> /dev/null; then
     echo "🌐 Ouverture de l'interface admin dans votre navigateur..."
     sleep 2
-    xdg-open "http://localhost:3000/admin-dashboard-chabakapro"
+    xdg-open "http://localhost:4000/admin-dashboard-chabakapro"
 else
-    echo "ℹ️  Ouvrez manuellement: http://localhost:3000/admin-dashboard-chabakapro"
+    echo "ℹ️  Ouvrez manuellement: http://localhost:4000/admin-dashboard-chabakapro"
 fi
